@@ -223,7 +223,8 @@ function calculateAndRenderDashboard() {
   document.getElementById("dash-target-usd").textContent = formatCurrency(targetBudget, "USD");
   
   document.getElementById("dash-usd-direct").textContent = formatCurrency(totalUSDDirect, "USD");
-  document.getElementById("dash-ars-equiv").textContent = `${formatCurrency(totalARSCollected, "ARS")} (equiv. ${formatCurrency(totalUSDCollected - totalUSDDirect, "USD")})`;
+  document.getElementById("dash-ars-equiv").textContent = formatCurrency(totalARSCollected, "ARS");
+  document.getElementById("dash-ars-equiv-usd").textContent = `Equiv. ${formatCurrency(totalUSDCollected - totalUSDDirect, "USD")}`;
 }
 
 // 5. RENDERIZAR TARJETAS DE SOCIOS
