@@ -32,9 +32,24 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('[PWA] Service Worker registrado:', reg.scope))
-          .catch(err => console.warn('[PWA] Error al registrar SW:', err));
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+          console.log('[PWA] Service Worker registrado:', reg.scope);
+
+          // Cuando se detecta una nueva versión del SW
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            console.log('[PWA] Nueva versión del SW detectada, instalando...');
+            newWorker.addEventListener('statechange', () => {
+              console.log('[PWA] SW state:', newWorker.state);
+            });
+          });
+        }).catch(err => console.warn('[PWA] Error al registrar SW:', err));
+
+        // Cuando el nuevo SW toma control → recargar para servir archivos frescos
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('[PWA] Nuevo SW activo — recargando para obtener versión actualizada');
+          window.location.reload();
+        });
       });
     }
   </script>
