@@ -222,7 +222,10 @@ function calculateAndRenderDashboard() {
   document.getElementById("dash-total-usd").textContent = formatCurrency(totalUSDCollected, "USD");
   document.getElementById("dash-target-usd").textContent = formatCurrency(targetBudget, "USD");
   
+  const rateToday = state.dolarBlue.promedio || 1545;
+  const usdDirectInARS = totalUSDDirect * rateToday;
   document.getElementById("dash-usd-direct").textContent = formatCurrency(totalUSDDirect, "USD");
+  document.getElementById("dash-usd-direct-ars").textContent = `Equiv. ${formatCurrency(usdDirectInARS, "ARS")}`;
   document.getElementById("dash-ars-equiv").textContent = formatCurrency(totalARSCollected, "ARS");
   document.getElementById("dash-ars-equiv-usd").textContent = `Equiv. ${formatCurrency(totalUSDCollected - totalUSDDirect, "USD")}`;
 }
