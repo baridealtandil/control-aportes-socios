@@ -187,12 +187,13 @@ function calculateAndRenderDashboard() {
   
   const partnerStats = {};
   PARTNERS.forEach(p => {
-    partnerStats[p] = { usdDirect: 0, arsTotal: 0, usdEquiv: 0, totalUsdValue: 0 };
+    partnerStats[p] = { usdDirect: 0, arsTotal: 0, usdEquiv: 0, totalUsdValue: 0, arsEquivOfUsd: 0 };
   });
 
   state.transactions.forEach(tx => {
     const amount = parseFloat(tx.amount);
     const rate = parseFloat(tx.rate || 1);
+    const rateUsed = rate > 1 ? rate : (state.dolarBlue.promedio || 1545);
     
     if (tx.currency === "USD") {
       totalUSDDirect += amount;
@@ -200,9 +201,11 @@ function calculateAndRenderDashboard() {
       if (partnerStats[tx.partner]) {
         partnerStats[tx.partner].usdDirect += amount;
         partnerStats[tx.partner].totalUsdValue += amount;
+        // Equivalente ARS histórico (al tipo de cambio del momento del aporte)
+        partnerStats[tx.partner].arsEquivOfUsd += amount * rateUsed;
       }
     } else {
-      const usdEquiv = amount / rate;
+      const usdEquiv = amount / rateUsed;
       totalARSCollected += amount;
       totalUSDCollected += usdEquiv;
       if (partnerStats[tx.partner]) {
@@ -238,10 +241,22 @@ function renderPartners() {
   container.innerHTML = "";
 
   PARTNERS.forEach(partnerName => {
-    const stats = state.partnerStats[partnerName] || { usdDirect: 0, arsTotal: 0, totalUsdValue: 0 };
+    const stats = state.partnerStats[partnerName] || { usdDirect: 0, arsTotal: 0, totalUsdValue: 0, arsEquivOfUsd: 0 };
     const remaining = Math.max(TARGET_PER_PARTNER - stats.totalUsdValue, 0);
     const percentage = Math.min((stats.totalUsdValue / TARGET_PER_PARTNER) * 100, 100).toFixed(1);
     const isCompleted = stats.totalUsdValue >= TARGET_PER_PARTNER;
+    const rateToday = state.dolarBlue.promedio || 1545;
+
+    // Líneas de detalle de monedas con equivalente
+    const usdLine = stats.usdDirect > 0
+      ? `<span>Dólares: <strong class="text-success">${formatCurrency(stats.usdDirect, "USD")}</strong>
+           <span style="font-size:0.75rem;color:var(--text-muted)"> ≈ ${formatCurrency(stats.arsEquivOfUsd, "ARS")}</span></span>`
+      : `<span>Dólares: <strong style="color:var(--text-muted)">$ 0 USD</strong></span>`;
+
+    const arsLine = stats.arsTotal > 0
+      ? `<span>Pesos: <strong class="text-primary">${formatCurrency(stats.arsTotal, "ARS")}</strong>
+           <span style="font-size:0.75rem;color:var(--text-muted)"> ≈ ${formatCurrency(stats.usdEquiv, "USD")}</span></span>`
+      : `<span>Pesos: <strong style="color:var(--text-muted)">$ 0 ARS</strong></span>`;
 
     const card = document.createElement("div");
     card.className = `partner-card ${isCompleted ? "completed" : ""}`;
@@ -265,9 +280,9 @@ function renderPartners() {
       </div>
       <div class="partner-mini-history">
         <div class="partner-mini-history-title">Desglose de aportes:</div>
-        <div class="partner-currencies">
-          <span>Dólares: <strong class="text-success">${formatCurrency(stats.usdDirect, "USD")}</strong></span>
-          <span>Pesos: <strong class="text-primary">${formatCurrency(stats.arsTotal, "ARS")}</strong></span>
+        <div class="partner-currencies" style="flex-direction:column; gap:6px;">
+          ${usdLine}
+          ${arsLine}
         </div>
       </div>
     `;
