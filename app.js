@@ -1137,26 +1137,47 @@ function renderEqualizationBoard() {
   const stats = state.partnerStats;
   if (!stats) return;
 
-  // Encontrar el valor máximo aportado en USD
-  let maxUSD = 0;
+  const rateToday = state.dolarBlue.promedio || 1545;
+
+  // Calcular el valor acumulado en ARS equivalente de cada socio para precisión exacta en pesos
+  const partnerArsValues = {};
   PARTNERS.forEach(p => {
-    const total = stats[p] ? stats[p].totalUsdValue : 0;
-    if (total > maxUSD) {
-      maxUSD = total;
+    partnerArsValues[p] = 0;
+  });
+
+  state.transactions.forEach(tx => {
+    const amount = parseFloat(tx.amount);
+    const rate = parseFloat(tx.rate || 1);
+    if (tx.currency === "ARS") {
+      partnerArsValues[tx.partner] += amount;
+    } else {
+      const txRate = rate > 1 ? rate : rateToday;
+      partnerArsValues[tx.partner] += (amount * txRate);
     }
   });
 
-  const rateToday = state.dolarBlue.promedio || 1545;
+  // Encontrar el valor máximo aportado en USD y ARS (redondeando a 2 decimales para USD)
+  let maxUSD = 0;
+  let maxARS = 0;
+  PARTNERS.forEach(p => {
+    const totalUSD = stats[p] ? parseFloat(stats[p].totalUsdValue.toFixed(2)) : 0;
+    const totalARS = partnerArsValues[p] || 0;
+    if (totalUSD > maxUSD) maxUSD = totalUSD;
+    if (totalARS > maxARS) maxARS = totalARS;
+  });
 
   PARTNERS.forEach(p => {
-    const totalUSD = stats[p] ? stats[p].totalUsdValue : 0;
-    const diffUSD = Math.max(maxUSD - totalUSD, 0);
-    const diffARS = diffUSD * rateToday;
+    const totalUSD = stats[p] ? parseFloat(stats[p].totalUsdValue.toFixed(2)) : 0;
+    const diffUSD = Math.max(parseFloat((maxUSD - totalUSD).toFixed(2)), 0);
+    const diffARS = Math.max(Math.round(maxARS - partnerArsValues[p]), 0);
 
     const tr = document.createElement("tr");
     
+    // Comparar con tolerancia para evitar problemas de coma flotante
+    const isLevel = diffUSD < 0.05;
+    
     let statusBadge = "";
-    if (diffUSD === 0 && maxUSD > 0) {
+    if (isLevel && maxUSD > 0) {
       statusBadge = `<span class="badge-desviacion underspent" style="background:rgba(16, 185, 129, 0.2);color:var(--success-light);padding:4px 8px;border-radius:6px;font-size:0.75rem;">👑 Máximo Aportante</span>`;
     } else if (maxUSD === 0) {
       statusBadge = `<span class="badge-desviacion text-muted" style="font-size:0.75rem;">Sin aportes</span>`;
@@ -1164,15 +1185,14 @@ function renderEqualizationBoard() {
       statusBadge = `<span class="badge-desviacion overspent" style="background:rgba(239, 68, 68, 0.15);color:#f87171;padding:4px 8px;border-radius:6px;font-size:0.75rem;">Falta Nivelar</span>`;
     }
 
+    const diffText = isLevel 
+      ? `<span class="text-success" style="font-weight:600">Nivelado</span>`
+      : `<span style="font-weight:600; color:var(--text-main)">$ ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(diffARS)} ARS <span style="font-size:0.8rem;color:var(--text-muted);font-weight:normal;">o</span> USD ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(diffUSD)}</span>`;
+
     tr.innerHTML = `
       <td><strong>${p}</strong></td>
       <td style="font-weight:600">${formatCurrency(totalUSD, "USD")}</td>
-      <td style="font-weight:600; color:${diffUSD > 0 ? 'var(--text-main)' : 'var(--success-light)'}">
-        ${diffUSD > 0 ? `USD ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(diffUSD)}` : "USD 0"}
-      </td>
-      <td style="font-weight:600; color:${diffUSD > 0 ? 'var(--text-main)' : 'var(--success-light)'}">
-        ${diffUSD > 0 ? `$ ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(diffARS)} ARS` : "$ 0 ARS"}
-      </td>
+      <td>${diffText}</td>
       <td>${statusBadge}</td>
     `;
     tbody.appendChild(tr);
