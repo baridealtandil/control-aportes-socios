@@ -461,33 +461,37 @@ function renderBudgets() {
   filtered.forEach(b => {
     const amount = parseFloat(b.amount);
     
-    // Convertir presupuesto a USD
-    const budgetUSD = b.currency === "USD" ? amount : (amount / rateToday);
-
-    // Sumar aportes asociados
-    let spentUSD = 0;
+    // Sumar aportes asociados convirtiendo al tipo de moneda del presupuesto
+    let spentOriginal = 0;
     state.transactions.forEach(tx => {
       if (tx.budget_id === b.id) {
         const amt = parseFloat(tx.amount);
         const rate = parseFloat(tx.rate || 1);
-        if (tx.currency === "USD") {
-          spentUSD += amt;
-        } else {
-          spentUSD += (amt / rate);
+        
+        if (tx.currency === b.currency) {
+          spentOriginal += amt;
+        } else if (b.currency === "ARS" && tx.currency === "USD") {
+          spentOriginal += (amt * rate); // Convertir USD aportados a pesos
+        } else if (b.currency === "USD" && tx.currency === "ARS") {
+          spentOriginal += (amt / rate); // Convertir ARS aportados a dólares
         }
       }
     });
 
-    const remainingUSD = budgetUSD - spentUSD;
-    const progressPercent = Math.min((spentUSD / budgetUSD) * 100, 100).toFixed(1);
+    const remainingOriginal = amount - spentOriginal;
+    const progressPercent = amount > 0 
+      ? Math.min((spentOriginal / amount) * 100, 100).toFixed(1) 
+      : 0;
     const dateFormatted = formatDate(b.date);
 
-    // Determinar estilo de desviación
+    // Determinar estilo de desviación en la moneda original del presupuesto
     let badgeHtml = "";
-    if (remainingUSD < -1) {
-      badgeHtml = `<span class="badge-desviacion overspent">Exceso +${formatCurrency(Math.abs(remainingUSD), "USD")}</span>`;
-    } else if (remainingUSD > 1) {
-      badgeHtml = `<span class="badge-desviacion text-muted">Faltan ${formatCurrency(remainingUSD, "USD")}</span>`;
+    const minThreshold = b.currency === "USD" ? 0.01 : 1;
+    
+    if (remainingOriginal < -minThreshold) {
+      badgeHtml = `<span class="badge-desviacion overspent">Exceso +${formatCurrency(Math.abs(remainingOriginal), b.currency)}</span>`;
+    } else if (remainingOriginal > minThreshold) {
+      badgeHtml = `<span class="badge-desviacion text-muted">Faltan ${formatCurrency(remainingOriginal, b.currency)}</span>`;
     } else {
       badgeHtml = `<span class="badge-desviacion underspent">Completado</span>`;
     }
@@ -499,12 +503,12 @@ function renderBudgets() {
       <td><span class="widget-pill btn-secondary" style="padding:4px 8px;font-size:0.75rem;">${b.phase.split(':')[0]}</span></td>
       <td>${b.provider ? `<strong>${b.provider}</strong>` : `<span class="text-muted">-</span>`}</td>
       <td style="font-weight:600">${formatCurrency(amount, b.currency)}</td>
-      <td class="text-success" style="font-weight:600">${formatCurrency(spentUSD, "USD")}</td>
+      <td class="text-success" style="font-weight:600">${formatCurrency(spentOriginal, b.currency)}</td>
       <td>${badgeHtml}</td>
       <td>
         <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:3px">${progressPercent}%</div>
         <div class="progress-container" style="height: 5px; margin: 0; width: 100px;">
-          <div class="progress-bar-fill" style="width: ${progressPercent}%; background: ${remainingUSD <= 0 ? 'var(--success)' : 'var(--primary)'}"></div>
+          <div class="progress-bar-fill" style="width: ${progressPercent}%; background: ${remainingOriginal <= 0 ? 'var(--success)' : 'var(--primary)'}"></div>
         </div>
       </td>
       ${window.AppStorage.isAdmin() ? `
@@ -530,7 +534,7 @@ function renderBudgets() {
         <strong>${b.phase.split(':')[0]}</strong>
         ${b.provider ? `<div style="font-size:0.85rem;color:var(--text-muted);margin:2px 0;">Proveedor: <strong>${b.provider}</strong></div>` : ''}
         <div style="margin-top: 5px; display:flex; justify-content:space-between; align-items:center;">
-          <span>Financiado: <strong>${formatCurrency(spentUSD, "USD")}</strong> (${progressPercent}%)</span>
+          <span>Financiado: <strong>${formatCurrency(spentOriginal, b.currency)}</strong> (${progressPercent}%)</span>
           ${badgeHtml}
         </div>
       </div>
