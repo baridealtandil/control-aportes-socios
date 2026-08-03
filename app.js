@@ -913,7 +913,7 @@ function toggleRateVisibility() {
   if (currency === "ARS") {
     rateGroup.classList.remove("hidden");
     rateInput.setAttribute("required", "true");
-    if (!rateInput.value || parseFloat(rateInput.value) === 0) {
+    if (!rateInput.value || parseFloat(rateInput.value) === 0 || parseFloat(rateInput.value) === 1) {
       rateInput.value = state.dolarBlue.promedio || 1350;
     }
   } else {
