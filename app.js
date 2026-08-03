@@ -340,10 +340,11 @@ function renderTransactions() {
         ${formatCurrency(amount, tx.currency)}
       </td>
       <td>$${formatNumber(rate > 1 ? rate : rateToday)}</td>
-      <td class="cell-amount" style="font-weight:600; color: ${tx.currency === "USD" ? 'var(--primary-light)' : 'var(--success-light)'}">
+      <td class="cell-amount" style="font-weight:600; color: ${tx.currency === "USD" ? '#34d399' : 'var(--success-light)'}">
         ${tx.currency === "ARS" 
-          ? formatCurrency(amount / rate, "USD") 
+          ? formatCurrency(amount / rate, "USD")
           : formatCurrency(amount * (rate > 1 ? rate : rateToday), "ARS")}
+        <div style="font-size:0.7rem;color:var(--text-muted);font-weight:normal;margin-top:2px;">${tx.currency === 'ARS' ? 'equiv. USD hist.' : 'equiv. ARS hist.'}</div>
       </td>
       ${window.AppStorage.isAdmin() ? `
         <td style="text-align:right">
@@ -375,7 +376,7 @@ function renderTransactions() {
           <span>Dólar: <strong>$${formatNumber(rate > 1 ? rate : rateToday)}</strong></span>
         </div>
         <div style="display:flex; justify-content:space-between;">
-          <span>Equiv: <strong style="color: ${tx.currency === "USD" ? 'var(--primary-light)' : 'var(--success-light)'}">
+          <span>${tx.currency === 'ARS' ? 'Equiv. USD:' : 'Equiv. ARS:'} <strong style="color: ${tx.currency === "USD" ? '#34d399' : 'var(--success-light)'}">
             ${tx.currency === "ARS" 
               ? formatCurrency(amount / rate, "USD") 
               : formatCurrency(amount * (rate > 1 ? rate : rateToday), "ARS")}
@@ -698,7 +699,8 @@ async function saveTransaction(event) {
   const currency = document.getElementById("tx-currency").value;
   const amount = parseFloat(document.getElementById("tx-amount").value);
   const rateInput = document.getElementById("tx-rate").value;
-  const rate = currency === "ARS" ? parseFloat(rateInput) : 1;
+  // Guardar el rate para AMBAS monedas (para poder calcular equiv histórico correcto)
+  const rate = parseFloat(rateInput) || state.dolarBlue.promedio || 1545;
   const budget_id = document.getElementById("tx-budget-id").value;
   const concept = document.getElementById("tx-concept").value.trim();
   const provider = document.getElementById("tx-provider").value.trim();
@@ -940,18 +942,22 @@ function toggleRateVisibility() {
   const currency = document.getElementById("tx-currency").value;
   const rateGroup = document.getElementById("tx-rate-group");
   const rateInput = document.getElementById("tx-rate");
+  const rateLabel = document.getElementById("tx-rate-label");
+  
+  // Siempre mostrar el campo de cotización (para USD también, para guardar el tipo de cambio histórico)
+  rateGroup.classList.remove("hidden");
   
   if (currency === "ARS") {
-    rateGroup.classList.remove("hidden");
     rateInput.setAttribute("required", "true");
+    if (rateLabel) rateLabel.textContent = "Cotización USD al momento del aporte (ARS por 1 USD)";
     if (!rateInput.value || parseFloat(rateInput.value) === 0 || parseFloat(rateInput.value) === 1) {
-      rateInput.value = state.dolarBlue.promedio || 1350;
+      rateInput.value = state.dolarBlue.promedio || 1545;
     }
   } else {
-    rateGroup.classList.add("hidden");
-    rateInput.removeAttribute("required");
+    rateInput.setAttribute("required", "true");
+    if (rateLabel) rateLabel.textContent = "Cotización USD al momento del aporte (para calcular equiv. ARS)";
     if (!rateInput.value || parseFloat(rateInput.value) <= 1) {
-      rateInput.value = state.dolarBlue.promedio || 1350;
+      rateInput.value = state.dolarBlue.promedio || 1545;
     }
   }
 }
