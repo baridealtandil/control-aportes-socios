@@ -172,6 +172,7 @@ function renderAll() {
   calculateAndRenderDashboard();
   renderPartners();
   renderEqualizationBoard();
+  renderCaja();
   renderTransactions();
   calculateAndRenderBudgetDashboard();
   renderBudgets();
@@ -1126,6 +1127,85 @@ function initEventListeners() {
       alert(e.message);
     }
   });
+}
+
+// 17b. CAJA — FONDOS SIN ASIGNAR A NINGÚN GASTO
+function renderCaja() {
+  const rateToday = state.dolarBlue.promedio || 1545;
+
+  // Filtrar aportes SIN budget_id (no asignados a ningún gasto)
+  const unassigned = state.transactions.filter(tx => !tx.budget_id);
+
+  // Totales por moneda
+  let cajaUSD = 0;
+  let cajaARS = 0;
+
+  // Detalle por socio: { partner: { usd, ars } }
+  const byPartner = {};
+
+  unassigned.forEach(tx => {
+    const amt = parseFloat(tx.amount);
+    const p = tx.partner;
+    if (!byPartner[p]) byPartner[p] = { usd: 0, ars: 0 };
+
+    if (tx.currency === 'USD') {
+      cajaUSD += amt;
+      byPartner[p].usd += amt;
+    } else {
+      cajaARS += amt;
+      byPartner[p].ars += amt;
+    }
+  });
+
+  const hasAnything = cajaUSD > 0 || cajaARS > 0;
+  const usdInARS = cajaUSD * rateToday;
+  const arsInUSD = cajaARS / rateToday;
+  const totalEquivARS = usdInARS + cajaARS;
+
+  // Actualizar totales
+  document.getElementById('caja-usd-total').textContent =
+    `USD ${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(cajaUSD)}`;
+  document.getElementById('caja-ars-total').textContent =
+    `$ ${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(cajaARS)}`;
+
+  document.getElementById('caja-usd-ars-equiv').textContent = cajaUSD > 0
+    ? `≈ $ ${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(usdInARS)} ARS al dólar de hoy`
+    : 'Sin fondos USD sin asignar';
+
+  document.getElementById('caja-ars-usd-equiv').textContent = cajaARS > 0
+    ? `≈ USD ${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(arsInUSD)} al dólar de hoy`
+    : 'Sin fondos ARS sin asignar';
+
+  document.getElementById('caja-total-ars-equiv').textContent = hasAnything
+    ? `Total equiv. ≈ $ ${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(totalEquivARS)} ARS`
+    : '';
+
+  // Mostrar / ocultar secciones
+  document.getElementById('caja-empty').style.display = hasAnything ? 'none' : 'block';
+  document.getElementById('caja-detalle').style.display = hasAnything && Object.keys(byPartner).length > 0 ? 'block' : 'none';
+
+  // Renderizar chips por socio
+  const detalleBody = document.getElementById('caja-detalle-body');
+  detalleBody.innerHTML = '';
+  Object.entries(byPartner).forEach(([partner, totals]) => {
+    const parts = [];
+    if (totals.usd > 0) parts.push(`<span style="color:#10b981;font-weight:600">USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(totals.usd)}</span>`);
+    if (totals.ars > 0) parts.push(`<span style="color:var(--primary-light);font-weight:600">$ ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(totals.ars)} ARS</span>`);
+    const chip = document.createElement('div');
+    chip.style.cssText = 'background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px 12px; font-size:0.82rem;';
+    chip.innerHTML = `<span style="color:var(--text-muted);margin-right:6px;">${partner}:</span>${parts.join(' + ')}`;
+    detalleBody.appendChild(chip);
+  });
+
+  // Colorear la sección según estado
+  const section = document.getElementById('caja-section');
+  if (!hasAnything) {
+    section.style.borderColor = 'rgba(255,255,255,0.06)';
+    section.style.background = 'rgba(13,17,23,0.3)';
+  } else {
+    section.style.borderColor = 'rgba(16,185,129,0.25)';
+    section.style.background = 'linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(13,17,23,0.5) 100%)';
+  }
 }
 
 // 17. TABLA DE NIVELACIÓN DE APORTES (IGUALAR AL MÁXIMO)
