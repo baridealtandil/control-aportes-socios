@@ -61,7 +61,7 @@ header {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  margin-bottom: 30px;
+  margin-bottom: 25px;
 }
 
 @media(min-width: 768px) {
@@ -114,6 +114,42 @@ header {
   color: var(--success-light);
 }
 
+/* Buscador Global */
+.search-wrapper {
+  position: relative;
+  margin-bottom: 25px;
+  width: 100%;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-main);
+  padding: 12px 20px 12px 42px;
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  outline: none;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  background: var(--bg-card-hover);
+}
+
+.search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
 /* Tarjeta Resumen General */
 .global-summary-card {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(22, 30, 49, 0.7) 100%);
@@ -153,12 +189,6 @@ header {
 .stat-label {
   font-size: 1rem;
   color: var(--text-muted);
-}
-
-.stat-value-large {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--text-main);
 }
 
 .progress-container {
@@ -751,6 +781,35 @@ header {
   background: rgba(16, 185, 129, 0.15);
   color: var(--success-light);
   border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* Lista de Categorías en Modal de Configuración */
+.categories-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.category-config-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.category-config-name {
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 /* Utilidades */

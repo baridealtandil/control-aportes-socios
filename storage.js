@@ -1,5 +1,5 @@
 // storage.js
-// Adaptador de comunicación con el Backend de Railway para el Control de Aportes y Presupuestos
+// Adaptador de comunicación con el Backend de Railway para el Control de Aportes, Presupuestos y Categorías
 
 const API_BASE = "https://backend-production-fdf3.up.railway.app";
 const ADMIN_PIN_KEY = "control_socios_admin_pin";
@@ -222,6 +222,63 @@ class StorageAdapter {
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Error al eliminar el presupuesto.");
+    }
+
+    return true;
+  }
+
+  // ================= CATEGORÍAS (CATEGORIES) =================
+
+  // Obtiene todas las categorías desde Railway
+  async getCategories() {
+    try {
+      const response = await fetch(`${API_BASE}/api/categories`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.categories || [];
+      }
+      throw new Error(`Error en servidor: ${response.statusText}`);
+    } catch (e) {
+      console.error("Fallo al obtener categorías:", e);
+      throw new Error("No se pudieron cargar las categorías desde el servidor.");
+    }
+  }
+
+  // Crea una nueva categoría
+  async addCategory(name) {
+    if (!this.isAdmin()) throw new Error("No autorizado.");
+
+    const response = await fetch(`${API_BASE}/api/categories`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-pin': this.adminPin
+      },
+      body: JSON.stringify({ name: name.trim() })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear la categoría.");
+    }
+
+    return await response.json();
+  }
+
+  // Elimina una categoría
+  async deleteCategory(id) {
+    if (!this.isAdmin()) throw new Error("No autorizado.");
+
+    const response = await fetch(`${API_BASE}/api/categories/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'x-admin-pin': this.adminPin
+      }
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Error al eliminar la categoría.");
     }
 
     return true;
