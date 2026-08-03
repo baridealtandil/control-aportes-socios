@@ -171,6 +171,7 @@ function renderAll() {
   renderAdminUI();
   calculateAndRenderDashboard();
   renderPartners();
+  renderEqualizationBoard();
   renderTransactions();
   calculateAndRenderBudgetDashboard();
   renderBudgets();
@@ -313,10 +314,11 @@ function renderTransactions() {
     return;
   }
 
+  const rateToday = state.dolarBlue.promedio || 1545;
+
   filtered.forEach(tx => {
     const amount = parseFloat(tx.amount);
     const rate = parseFloat(tx.rate || 1);
-    const usdEquiv = tx.currency === "USD" ? amount : amount / rate;
     const dateFormatted = formatDate(tx.date);
     
     // Buscar si está asociado a un presupuesto
@@ -333,11 +335,15 @@ function renderTransactions() {
       <td><span class="widget-pill btn-secondary" style="padding:4px 8px;font-size:0.75rem;">${tx.phase.split(':')[0]}</span></td>
       <td>${tx.concept}${budgetConceptHtml}</td>
       <td>${tx.provider ? `<strong>${tx.provider}</strong>` : `<span class="text-muted">-</span>`}</td>
-      <td class="${tx.currency === "USD" ? "text-success" : "text-primary"}" style="font-weight:600">
+      <td class="cell-amount ${tx.currency === "USD" ? "text-success" : "text-primary"}" style="font-weight:600">
         ${formatCurrency(amount, tx.currency)}
       </td>
-      <td>${tx.currency === "ARS" ? `$${formatNumber(rate)}` : "-"}</td>
-      <td style="font-weight:600">${formatCurrency(usdEquiv, "USD")}</td>
+      <td>$${formatNumber(rate > 1 ? rate : rateToday)}</td>
+      <td class="cell-amount" style="font-weight:600; color: ${tx.currency === "USD" ? 'var(--primary-light)' : 'var(--success-light)'}">
+        ${tx.currency === "ARS" 
+          ? formatCurrency(amount / rate, "USD") 
+          : formatCurrency(amount * (rate > 1 ? rate : rateToday), "ARS")}
+      </td>
       ${window.AppStorage.isAdmin() ? `
         <td style="text-align:right">
           <button class="btn btn-secondary btn-small" onclick="editTransaction('${tx.id}')">Editar</button>
@@ -362,10 +368,18 @@ function renderTransactions() {
         ${tx.provider ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">Proveedor: <strong>${tx.provider}</strong></div>` : ''}
         ${associatedBudget ? `<div style="font-size:0.75rem;color:var(--success-light);margin-top:2px;">📌 Relativo a: ${associatedBudget.concept}</div>` : ""}
       </div>
-      <div class="mobile-tx-footer">
-        <span>${dateFormatted}</span>
-        <span>Equiv: <strong>${formatCurrency(usdEquiv, "USD")}</strong></span>
-        ${tx.currency === "ARS" ? `<span>Dólar: $${formatNumber(rate)}</span>` : ""}
+      <div class="mobile-tx-footer" style="display:flex; flex-direction:column; gap:4px; margin-top:8px; border-top:1px solid rgba(255,255,255,0.04); padding-top:8px; font-size:0.8rem; color:var(--text-muted);">
+        <div style="display:flex; justify-content:space-between;">
+          <span>Fecha: ${dateFormatted}</span>
+          <span>Dólar: <strong>$${formatNumber(rate > 1 ? rate : rateToday)}</strong></span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span>Equiv: <strong style="color: ${tx.currency === "USD" ? 'var(--primary-light)' : 'var(--success-light)'}">
+            ${tx.currency === "ARS" 
+              ? formatCurrency(amount / rate, "USD") 
+              : formatCurrency(amount * (rate > 1 ? rate : rateToday), "ARS")}
+          </strong></span>
+        </div>
       </div>
       ${window.AppStorage.isAdmin() ? `
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:5px;border-top:1px solid rgba(255,255,255,0.04);padding-top:8px;">
@@ -1111,5 +1125,56 @@ function initEventListeners() {
     } catch (e) {
       alert(e.message);
     }
+  });
+}
+
+// 17. TABLA DE NIVELACIÓN DE APORTES (IGUALAR AL MÁXIMO)
+function renderEqualizationBoard() {
+  const tbody = document.getElementById("equalization-table-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const stats = state.partnerStats;
+  if (!stats) return;
+
+  // Encontrar el valor máximo aportado en USD
+  let maxUSD = 0;
+  PARTNERS.forEach(p => {
+    const total = stats[p] ? stats[p].totalUsdValue : 0;
+    if (total > maxUSD) {
+      maxUSD = total;
+    }
+  });
+
+  const rateToday = state.dolarBlue.promedio || 1545;
+
+  PARTNERS.forEach(p => {
+    const totalUSD = stats[p] ? stats[p].totalUsdValue : 0;
+    const diffUSD = Math.max(maxUSD - totalUSD, 0);
+    const diffARS = diffUSD * rateToday;
+
+    const tr = document.createElement("tr");
+    
+    let statusBadge = "";
+    if (diffUSD === 0 && maxUSD > 0) {
+      statusBadge = `<span class="badge-desviacion underspent" style="background:rgba(16, 185, 129, 0.2);color:var(--success-light);padding:4px 8px;border-radius:6px;font-size:0.75rem;">👑 Máximo Aportante</span>`;
+    } else if (maxUSD === 0) {
+      statusBadge = `<span class="badge-desviacion text-muted" style="font-size:0.75rem;">Sin aportes</span>`;
+    } else {
+      statusBadge = `<span class="badge-desviacion overspent" style="background:rgba(239, 68, 68, 0.15);color:#f87171;padding:4px 8px;border-radius:6px;font-size:0.75rem;">Falta Nivelar</span>`;
+    }
+
+    tr.innerHTML = `
+      <td><strong>${p}</strong></td>
+      <td style="font-weight:600">${formatCurrency(totalUSD, "USD")}</td>
+      <td style="font-weight:600; color:${diffUSD > 0 ? 'var(--text-main)' : 'var(--success-light)'}">
+        ${diffUSD > 0 ? `USD ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(diffUSD)}` : "USD 0"}
+      </td>
+      <td style="font-weight:600; color:${diffUSD > 0 ? 'var(--text-main)' : 'var(--success-light)'}">
+        ${diffUSD > 0 ? `$ ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(diffARS)} ARS` : "$ 0 ARS"}
+      </td>
+      <td>${statusBadge}</td>
+    `;
+    tbody.appendChild(tr);
   });
 }

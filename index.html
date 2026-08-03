@@ -90,6 +90,32 @@
         </div>
       </section>
 
+      <!-- TABLA DE NIVELACIÓN DE APORTES -->
+      <section class="history-section" style="margin-top: 25px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(22, 30, 49, 0.4) 100%);">
+        <div class="history-header">
+          <div class="history-title-area">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <h2 style="font-size:1.25rem; font-weight:600;">Nivelación de Aportes (Igualar al Máximo)</h2>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Socio</th>
+                <th>Total Aportado (USD equiv.)</th>
+                <th>Diferencia para Igualar (USD)</th>
+                <th>Diferencia para Igualar (ARS equiv.)</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="equalization-table-body">
+              <!-- Generado dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <!-- HISTORIAL DE APORTES -->
       <section class="history-section">
         <div class="history-header">
@@ -129,7 +155,7 @@
                 <th>Proveedor</th>
                 <th>Monto Original</th>
                 <th>Cotización Dólar</th>
-                <th>Equivalente USD</th>
+                <th>Valor Equivalente</th>
                 <th class="admin-only hidden" style="text-align:right">Acciones</th>
               </tr>
             </thead>
