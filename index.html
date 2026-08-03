@@ -2,10 +2,42 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Control de Aportes y Presupuestos - Pub/Restaurante</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Control de Aportes - Paca Bar</title>
   <meta name="description" content="Sistema bimonetario para el control de aportes y desvíos de presupuesto de socios con cotización de Dólar Blue.">
+
+  <!-- ── PWA: Manifest ── -->
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- ── PWA: Theme & Status Bar ── -->
+  <meta name="theme-color" content="#6366f1">
+  <meta name="msapplication-TileColor" content="#0d1117">
+  <meta name="msapplication-TileImage" content="/icons/icon-144.png">
+
+  <!-- ── PWA: iOS / Safari ── -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Paca Bar">
+  <link rel="apple-touch-icon" href="/icons/icon-152.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
+
+  <!-- ── Favicon ── -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-96.png">
+  <link rel="shortcut icon" href="/icons/icon-96.png">
+
   <link rel="stylesheet" href="styles.css">
+
+  <!-- ── Service Worker Registration ── -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('[PWA] Service Worker registrado:', reg.scope))
+          .catch(err => console.warn('[PWA] Error al registrar SW:', err));
+      });
+    }
+  </script>
 </head>
 <body>
 
