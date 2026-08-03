@@ -481,9 +481,11 @@ function renderBudgets() {
         if (tx.currency === b.currency) {
           spentOriginal += amt;
         } else if (b.currency === "ARS" && tx.currency === "USD") {
-          spentOriginal += (amt * rate); // Convertir USD aportados a pesos
+          const txRate = rate > 1 ? rate : rateToday;
+          spentOriginal += (amt * txRate); // Convertir USD aportados a pesos
         } else if (b.currency === "USD" && tx.currency === "ARS") {
-          spentOriginal += (amt / rate); // Convertir ARS aportados a dólares
+          const txRate = rate > 1 ? rate : rateToday;
+          spentOriginal += (amt / txRate); // Convertir ARS aportados a dólares
         }
       }
     });
@@ -933,7 +935,9 @@ function toggleRateVisibility() {
   } else {
     rateGroup.classList.add("hidden");
     rateInput.removeAttribute("required");
-    rateInput.value = "1";
+    if (!rateInput.value || parseFloat(rateInput.value) <= 1) {
+      rateInput.value = state.dolarBlue.promedio || 1350;
+    }
   }
 }
 
