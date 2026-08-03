@@ -664,7 +664,6 @@ async function saveTransaction(event) {
   if (!window.AppStorage.isAdmin()) return alert("No tienes permisos de administrador.");
 
   const id = document.getElementById("tx-id").value;
-  const partner = document.getElementById("tx-partner").value;
   const currency = document.getElementById("tx-currency").value;
   const amount = parseFloat(document.getElementById("tx-amount").value);
   const rateInput = document.getElementById("tx-rate").value;
@@ -692,23 +691,47 @@ async function saveTransaction(event) {
   submitBtn.classList.add("loading");
 
   try {
-    const txData = {
-      partner,
-      currency,
-      amount,
-      rate,
-      concept,
-      provider,
-      phase,
-      date,
-      budget_id: budget_id || null
-    };
-
     if (id) {
+      // Edición: único socio desde el campo readonly
+      const partner = document.getElementById("tx-partner-edit").value;
+      const txData = {
+        partner,
+        currency,
+        amount,
+        rate,
+        concept,
+        provider,
+        phase,
+        date,
+        budget_id: budget_id || null
+      };
       await window.AppStorage.updateTransaction(id, txData);
     } else {
-      txData.id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9);
-      await window.AppStorage.addTransaction(txData);
+      // Creación: recolectar socios seleccionados desde las casillas de verificación
+      const checkedBoxes = document.querySelectorAll('input[name="tx-partner-checkbox"]:checked');
+      if (checkedBoxes.length === 0) {
+        throw new Error("Por favor selecciona al menos un socio.");
+      }
+
+      // Crear en bucle un aporte para cada socio seleccionado
+      const savePromises = Array.from(checkedBoxes).map(async (cb) => {
+        const partnerName = cb.value;
+        const txData = {
+          id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+          partner: partnerName,
+          currency,
+          amount,
+          rate,
+          concept,
+          provider,
+          phase,
+          date,
+          budget_id: budget_id || null
+        };
+        return window.AppStorage.addTransaction(txData);
+      });
+
+      await Promise.all(savePromises);
     }
 
     closeModal("modal-transaction");
@@ -739,7 +762,12 @@ window.editTransaction = function(id) {
   if (!tx) return;
 
   document.getElementById("tx-id").value = tx.id;
-  document.getElementById("tx-partner").value = tx.partner;
+  
+  // Ocultar sección de creación múltiple y mostrar campo único de edición
+  document.getElementById("tx-partners-group-create").classList.add("hidden");
+  document.getElementById("tx-partners-group-edit").classList.remove("hidden");
+  document.getElementById("tx-partner-edit").value = tx.partner;
+
   document.getElementById("tx-currency").value = tx.currency;
   document.getElementById("tx-amount").value = tx.amount;
   document.getElementById("tx-rate").value = tx.rate;
@@ -854,6 +882,17 @@ function closeModal(modalId) {
       document.getElementById("tx-form").reset();
       document.getElementById("tx-id").value = "";
       document.getElementById("modal-tx-title").textContent = "Nuevo Aporte";
+      
+      // Restaurar visualización de creación y checkboxes
+      document.getElementById("tx-partners-group-create").classList.remove("hidden");
+      document.getElementById("tx-partners-group-edit").classList.add("hidden");
+      document.getElementById("tx-partner-edit").value = "";
+      
+      const checkboxes = document.querySelectorAll('input[name="tx-partner-checkbox"]');
+      checkboxes.forEach((cb, idx) => {
+        cb.checked = idx === 0;
+      });
+
       document.getElementById("tx-rate").value = state.dolarBlue.promedio;
       toggleRateVisibility();
     } else if (modalId === "modal-budget") {

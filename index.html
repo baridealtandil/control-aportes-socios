@@ -250,14 +250,29 @@
         <div class="modal-body">
           <input type="hidden" id="tx-id">
           
-          <div class="form-group">
-            <label for="tx-partner">Socio que Aporta</label>
-            <select id="tx-partner" class="select-input" style="width: 100%" required>
-              <option value="Franco">Franco</option>
-              <option value="David">David</option>
-              <option value="Gabriel">Gabriel</option>
-              <option value="Sandra">Sandra</option>
-            </select>
+          <!-- Selección de Socios (Múltiple para creación, única para edición) -->
+          <div class="form-group" id="tx-partners-group-create">
+            <label style="display: block; margin-bottom: 8px;">Socios que Aportan</label>
+            <div style="display:flex; gap: 15px; flex-wrap: wrap; margin-top: 5px;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:0.95rem; cursor:pointer;">
+                <input type="checkbox" name="tx-partner-checkbox" value="Franco" checked style="width:18px; height:18px; accent-color:var(--primary);"> Franco
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:0.95rem; cursor:pointer;">
+                <input type="checkbox" name="tx-partner-checkbox" value="David" style="width:18px; height:18px; accent-color:var(--primary);"> David
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:0.95rem; cursor:pointer;">
+                <input type="checkbox" name="tx-partner-checkbox" value="Gabriel" style="width:18px; height:18px; accent-color:var(--primary);"> Gabriel
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:0.95rem; cursor:pointer;">
+                <input type="checkbox" name="tx-partner-checkbox" value="Sandra" style="width:18px; height:18px; accent-color:var(--primary);"> Sandra
+              </label>
+            </div>
+            <span class="form-helper" style="margin-top: 5px;">Puedes marcar varios socios para registrar el mismo aporte para cada uno de ellos.</span>
+          </div>
+
+          <div class="form-group hidden" id="tx-partners-group-edit">
+            <label for="tx-partner-edit">Socio que Aporta (Edición)</label>
+            <input type="text" id="tx-partner-edit" class="text-input" style="width: 100%" readonly>
           </div>
 
           <div class="form-row-2">
