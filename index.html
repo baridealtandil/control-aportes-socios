@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Aportes - Socios Restaurante & Pub</title>
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Sistema bimonetario para el control y registro de aportes de capital de socios con cotización en tiempo real de Dólar Blue.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- CABECERA DE LA APP -->
+    <header>
+      <div class="brand-section">
+        <h1>Control de Aportes</h1>
+        <p>Restaurante & Pub • Registro de Capital</p>
+      </div>
+      <div class="header-meta-widgets">
+        <div class="widget-pill" id="widget-dolar">
+          <span class="label">Dólar Blue:</span>
+          <span class="value" id="widget-dolar-value">Cargando...</span>
+        </div>
+        <div class="widget-pill" id="widget-cloud-status">
+          Base de datos: <span class="text-warning">Cargando...</span>
+        </div>
+        <div class="widget-pill admin-badge" id="admin-status-badge">
+          Modo Socio (Solo Lectura)
+        </div>
+      </div>
+    </header>
+
+    <!-- TARJETA DE RESUMEN GLOBAL -->
+    <section class="global-summary-card">
+      <div class="global-summary-grid">
+        <div class="global-stats">
+          <div class="stat-group">
+            <span class="stat-label">Total Recaudado (USD equiv.)</span>
+            <span class="stat-value-large" id="dash-total-usd">u$s 0</span>
+          </div>
+          <div class="progress-container">
+            <div class="progress-bar-fill" id="dash-progress-fill"></div>
+          </div>
+          <div class="stat-group">
+            <span class="stat-label">Meta Global del Proyecto (u$s 50k x 4)</span>
+            <span class="stat-value-large" style="font-size: 1.25rem; font-weight: 500;" id="dash-target-usd">u$s 200,000</span>
+          </div>
+        </div>
+        <div class="sub-stats-row">
+          <div class="sub-stat-card">
+            <div class="sub-stat-title">Aporte Dólares Directo</div>
+            <div class="sub-stat-val text-success" id="dash-usd-direct">u$s 0</div>
+          </div>
+          <div class="sub-stat-card">
+            <div class="sub-stat-title">Aporte Pesos (ARS)</div>
+            <div class="sub-stat-val text-primary" id="dash-ars-equiv" style="font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">$0</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- METAS POR SOCIO -->
+    <section class="partners-section">
+      <h2 class="partners-section-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        Estado de Aportes por Socio (Meta: u$s 50.000 c/u)
+      </h2>
+      <div class="partners-grid" id="partners-grid">
+        <!-- Generado dinámicamente por JS -->
+      </div>
+    </section>
+
+    <!-- HISTORIAL DE MOVIMIENTOS -->
+    <section class="history-section">
+      <div class="history-header">
+        <div class="history-title-area">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <h2 style="font-size:1.25rem; font-weight:600;">Historial de Aportes</h2>
+        </div>
+        
+        <!-- Filtros -->
+        <div class="history-filters">
+          <select id="filter-socio" class="select-input">
+            <option value="">Todos los Socios</option>
+            <option value="Franco">Franco</option>
+            <option value="David">David</option>
+            <option value="Gabriel">Gabriel</option>
+            <option value="Sandra">Sandra</option>
+          </select>
+          <select id="filter-moneda" class="select-input">
+            <option value="">Todas las Monedas</option>
+            <option value="USD">USD ($)</option>
+            <option value="ARS">ARS ($)</option>
+          </select>
+          <select id="filter-fase" class="select-input">
+            <option value="">Todas las Fases</option>
+            <option value="Fase 1: Alquiler e Infraestructura">Fase 1: Alquiler/Obra</option>
+            <option value="Fase 2: Muebles y Decoración">Fase 2: Muebles/Deco</option>
+            <option value="Fase 3: Equipamiento de Barra y Cocina">Fase 3: Barra/Cocina</option>
+            <option value="Fase 4: Insumos y Trámites">Fase 4: Insumos/Gastos</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Vista Desktop (Tabla) -->
+      <div class="table-wrapper">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Socio</th>
+              <th>Fase</th>
+              <th>Concepto</th>
+              <th>Monto Original</th>
+              <th>Cotización Dólar</th>
+              <th>Equivalente USD</th>
+              <th class="admin-only hidden" style="text-align:right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body">
+            <!-- Cargado por JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Vista Móvil (Lista de Tarjetas) -->
+      <div class="mobile-history-list" id="mobile-history-list">
+        <!-- Cargado por JS -->
+      </div>
+    </section>
+
+  </div>
+
+  <!-- BARRA DE ACCIÓN FLOTANTE / STICKY EN CELULARES -->
+  <div class="mobile-sticky-bar">
+    <button class="btn btn-secondary" id="login-action-btn">
+      Entrar como Admin
+    </button>
+    <button class="btn btn-secondary admin-only hidden" id="btn-pin-settings" title="Cambiar PIN">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      Ajustes PIN
+    </button>
+    <button class="btn admin-only hidden" id="btn-add-tx">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      + Aporte
+    </button>
+  </div>
+
+  <!-- ================= MODALES ================= -->
+
+  <!-- MODAL: REGISTRO DE TRANSACCIÓN (AGREGAR/EDITAR APORTE) -->
+  <div class="modal-overlay" id="modal-transaction">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-tx-title">Nuevo Aporte</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <form id="tx-form">
+        <div class="modal-body">
+          <input type="hidden" id="tx-id">
+          
+          <div class="form-group">
+            <label for="tx-partner">Socio que Aporta</label>
+            <select id="tx-partner" class="select-input" style="width: 100%" required>
+              <option value="Franco">Franco</option>
+              <option value="David">David</option>
+              <option value="Gabriel">Gabriel</option>
+              <option value="Sandra">Sandra</option>
+            </select>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="tx-currency">Moneda</label>
+              <select id="tx-currency" class="select-input" style="width: 100%" required>
+                <option value="USD">Dólares (USD)</option>
+                <option value="ARS">Pesos (ARS)</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="tx-amount">Monto del Aporte</label>
+              <input type="number" id="tx-amount" class="text-input" style="width: 100%" placeholder="Ej: 5000" min="0.01" step="any" required>
+            </div>
+          </div>
+
+          <div class="form-group" id="tx-rate-group">
+            <label for="tx-rate">Cotización Dólar Blue (1 USD = X ARS)</label>
+            <input type="number" id="tx-rate" class="text-input" style="width: 100%" placeholder="Ej: 1545" min="1" step="any">
+            <span class="form-helper">Se autocompleta con el valor medio del mercado. Puedes modificarlo.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="tx-concept">Concepto / Detalle del Gasto o Aporte</label>
+            <input type="text" id="tx-concept" class="text-input" style="width: 100%" placeholder="Ej: Alquiler del Local, compra de cemento, etc." required list="concept-suggestions">
+            <datalist id="concept-suggestions">
+              <option value="Aporte de Capital Inicial">
+              <option value="Seña Alquiler de Local">
+              <option value="Materiales de Construcción">
+              <option value="Mano de Obra Construcción">
+              <option value="Honorarios Arquitecto/Diseñador">
+              <option value="Comisión Inmobiliaria">
+              <option value="Compra de Muebles y Sillas">
+              <option value="Instalación Eléctrica e Iluminación">
+              <option value="Plomería y Baños">
+              <option value="Equipamiento de Barra">
+              <option value="Equipamiento de Cocina">
+              <option value="Habilitaciones y Tasas">
+              <option value="Decoración General">
+            </datalist>
+          </div>
+
+          <div class="form-group">
+            <label for="tx-phase">Fase / Categoría del Gasto</label>
+            <select id="tx-phase" class="select-input" style="width: 100%" required>
+              <option value="Fase 1: Alquiler e Infraestructura">Fase 1: Alquiler e Infraestructura</option>
+              <option value="Fase 2: Muebles y Decoración">Fase 2: Muebles y Decoración</option>
+              <option value="Fase 3: Equipamiento de Barra y Cocina">Fase 3: Equipamiento de Barra y Cocina</option>
+              <option value="Fase 4: Insumos y Trámites">Fase 4: Insumos y Trámites de Apertura</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="tx-date">Fecha de Aporte</label>
+            <input type="date" id="tx-date" class="text-input" style="width: 100%" required>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close" type="button">Cancelar</button>
+          <button class="btn" type="submit" id="tx-submit-btn">Guardar Aporte</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: LOGIN DE ADMINISTRADOR -->
+  <div class="modal-overlay" id="modal-login">
+    <div class="modal-container" style="max-width: 380px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Acceso Administrador</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <form id="login-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="login-pin">PIN Secreto</label>
+            <input type="password" id="login-pin" class="text-input" style="width: 100%; text-align: center; font-size: 1.5rem; letter-spacing: 5px;" placeholder="••••" required maxlength="10">
+            <span class="form-helper" style="justify-content: center; margin-top:5px;">El PIN por defecto en el servidor es <strong>1234</strong></span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close" type="button">Cancelar</button>
+          <button class="btn" type="submit">Ingresar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CAMBIAR PIN DE ADMINISTRADOR -->
+  <div class="modal-overlay" id="modal-pin-config">
+    <div class="modal-container" style="max-width: 380px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Cambiar PIN Secreto</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <form id="pin-config-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="cfg-new-pin">Nuevo PIN de Acceso</label>
+            <input type="password" id="cfg-new-pin" class="text-input" style="width: 100%; text-align: center; font-size: 1.5rem; letter-spacing: 5px;" placeholder="••••" required maxlength="10" minlength="4">
+            <span class="form-helper">El PIN debe ser numérico o alfanumérico de al menos 4 dígitos. Se actualizará en la base de datos de Railway.</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close" type="button">Cancelar</button>
+          <button class="btn" type="submit" id="cfg-pin-submit-btn">Guardar PIN</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="storage.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
