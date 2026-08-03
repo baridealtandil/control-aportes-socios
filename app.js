@@ -1232,19 +1232,19 @@ function renderCaja() {
 // 17. TABLA DE NIVELACIÓN DE APORTES (IGUALAR AL MÁXIMO)
 function renderEqualizationBoard() {
   const tbody = document.getElementById("equalization-table-body");
+  const mobileList = document.getElementById("equalization-mobile-list");
   if (!tbody) return;
   tbody.innerHTML = "";
+  if (mobileList) mobileList.innerHTML = "";
 
   const stats = state.partnerStats;
   if (!stats) return;
 
   const rateToday = state.dolarBlue.promedio || 1545;
 
-  // Calcular el valor acumulado en ARS equivalente de cada socio para precisión exacta en pesos
+  // Calcular el valor acumulado en ARS equivalente de cada socio
   const partnerArsValues = {};
-  PARTNERS.forEach(p => {
-    partnerArsValues[p] = 0;
-  });
+  PARTNERS.forEach(p => { partnerArsValues[p] = 0; });
 
   state.transactions.forEach(tx => {
     const amount = parseFloat(tx.amount);
@@ -1257,7 +1257,7 @@ function renderEqualizationBoard() {
     }
   });
 
-  // Encontrar el valor máximo aportado en USD y ARS (redondeando a 2 decimales para USD)
+  // Encontrar el máximo aportado
   let maxUSD = 0;
   let maxARS = 0;
   PARTNERS.forEach(p => {
@@ -1271,25 +1271,23 @@ function renderEqualizationBoard() {
     const totalUSD = stats[p] ? parseFloat(stats[p].totalUsdValue.toFixed(2)) : 0;
     const diffUSD = Math.max(parseFloat((maxUSD - totalUSD).toFixed(2)), 0);
     const diffARS = Math.max(Math.round(maxARS - partnerArsValues[p]), 0);
-
-    const tr = document.createElement("tr");
-    
-    // Comparar con tolerancia para evitar problemas de coma flotante
     const isLevel = diffUSD < 0.05;
-    
+
     let statusBadge = "";
     if (isLevel && maxUSD > 0) {
-      statusBadge = `<span class="badge-desviacion underspent" style="background:rgba(16, 185, 129, 0.2);color:var(--success-light);padding:4px 8px;border-radius:6px;font-size:0.75rem;">👑 Máximo Aportante</span>`;
+      statusBadge = `<span class="badge-desviacion underspent" style="background:rgba(16,185,129,0.2);color:var(--success-light);padding:4px 8px;border-radius:6px;font-size:0.75rem;">👑 Máximo Aportante</span>`;
     } else if (maxUSD === 0) {
       statusBadge = `<span class="badge-desviacion text-muted" style="font-size:0.75rem;">Sin aportes</span>`;
     } else {
-      statusBadge = `<span class="badge-desviacion overspent" style="background:rgba(239, 68, 68, 0.15);color:#f87171;padding:4px 8px;border-radius:6px;font-size:0.75rem;">Falta Nivelar</span>`;
+      statusBadge = `<span class="badge-desviacion overspent" style="background:rgba(239,68,68,0.15);color:#f87171;padding:4px 8px;border-radius:6px;font-size:0.75rem;">Falta Nivelar</span>`;
     }
 
-    const diffText = isLevel 
+    const diffText = isLevel
       ? `<span class="text-success" style="font-weight:600">Nivelado</span>`
-      : `<span style="font-weight:600; color:var(--text-main)">$ ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(diffARS)} ARS <span style="font-size:0.8rem;color:var(--text-muted);font-weight:normal;">o</span> USD ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(diffUSD)}</span>`;
+      : `<span style="font-weight:600;color:var(--text-main)">$ ${new Intl.NumberFormat("es-AR",{maximumFractionDigits:0}).format(diffARS)} ARS <span style="font-size:0.8rem;color:var(--text-muted);font-weight:normal;">o</span> USD ${new Intl.NumberFormat("es-AR",{maximumFractionDigits:0}).format(diffUSD)}</span>`;
 
+    // ── FILA DESKTOP ──────────────────────────────────────────
+    const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><strong>${p}</strong></td>
       <td style="font-weight:600">${formatCurrency(totalUSD, "USD")}</td>
@@ -1297,5 +1295,28 @@ function renderEqualizationBoard() {
       <td>${statusBadge}</td>
     `;
     tbody.appendChild(tr);
+
+    // ── TARJETA MÓVIL ─────────────────────────────────────────
+    if (mobileList) {
+      const card = document.createElement("div");
+      card.className = "mobile-tx-card";
+      card.innerHTML = `
+        <div class="mobile-tx-header">
+          <span class="mobile-tx-partner">${p}</span>
+          <span>${statusBadge}</span>
+        </div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;font-size:0.88rem;">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--text-muted)">Total aportado</span>
+            <strong>${formatCurrency(totalUSD, "USD")}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:var(--text-muted)">Falta nivelar</span>
+            <span>${diffText}</span>
+          </div>
+        </div>
+      `;
+      mobileList.appendChild(card);
+    }
   });
 }
