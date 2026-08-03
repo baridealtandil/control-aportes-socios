@@ -155,10 +155,17 @@ header {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(22, 30, 49, 0.7) 100%);
   border: 1px solid rgba(99, 102, 241, 0.25);
   border-radius: var(--border-radius);
-  padding: 24px;
-  margin-bottom: 30px;
+  padding: 16px;
+  margin-bottom: 20px;
   backdrop-filter: blur(10px);
   box-shadow: var(--shadow-md);
+}
+
+@media(min-width: 576px) {
+  .global-summary-card {
+    padding: 24px;
+    margin-bottom: 30px;
+  }
 }
 
 .global-summary-grid {
@@ -182,13 +189,41 @@ header {
 
 .stat-group {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+@media(min-width: 576px) {
+  .stat-group {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+  }
 }
 
 .stat-label {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--text-muted);
+}
+
+@media(min-width: 576px) {
+  .stat-label {
+    font-size: 1rem;
+  }
+}
+
+.stat-value-large {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+@media(min-width: 576px) {
+  .stat-value-large {
+    font-size: 1.8rem;
+  }
 }
 
 .progress-container {
@@ -211,9 +246,16 @@ header {
 
 .sub-stats-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  grid-template-columns: 1fr;
+  gap: 12px;
   margin-top: 10px;
+}
+
+@media(min-width: 576px) {
+  .sub-stats-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
 }
 
 .sub-stats-row .sub-stat-card {
@@ -244,6 +286,12 @@ header {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 8px;
   overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
+}
+
+.tabs-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .tab-btn {
