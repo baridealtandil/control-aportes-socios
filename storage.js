@@ -1,5 +1,5 @@
 // storage.js
-// Adaptador de comunicación con el Backend de Railway para el Control de Aportes
+// Adaptador de comunicación con el Backend de Railway para el Control de Aportes y Presupuestos
 
 const API_BASE = "https://backend-production-fdf3.up.railway.app";
 const ADMIN_PIN_KEY = "control_socios_admin_pin";
@@ -70,6 +70,8 @@ class StorageAdapter {
     this.adminPin = newPin.trim();
     localStorage.setItem(ADMIN_PIN_KEY, this.adminPin);
   }
+
+  // ================= TRANSACCIONES / APORTES =================
 
   // Obtiene todas las transacciones desde Railway
   async getData() {
@@ -142,6 +144,84 @@ class StorageAdapter {
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Error al eliminar el aporte.");
+    }
+
+    return true;
+  }
+
+  // ================= PRESUPUESTOS (BUDGETS) =================
+
+  // Obtiene todos los presupuestos desde Railway
+  async getBudgets() {
+    try {
+      const response = await fetch(`${API_BASE}/api/budgets`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.budgets || [];
+      }
+      throw new Error(`Error en servidor: ${response.statusText}`);
+    } catch (e) {
+      console.error("Fallo al obtener presupuestos:", e);
+      throw new Error("No se pudieron cargar los presupuestos desde el servidor.");
+    }
+  }
+
+  // Crea un presupuesto en Railway
+  async addBudget(budget) {
+    if (!this.isAdmin()) throw new Error("No autorizado.");
+
+    const response = await fetch(`${API_BASE}/api/budgets`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-pin': this.adminPin
+      },
+      body: JSON.stringify(budget)
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Error al guardar el presupuesto.");
+    }
+
+    return true;
+  }
+
+  // Edita un presupuesto en Railway
+  async updateBudget(id, budget) {
+    if (!this.isAdmin()) throw new Error("No autorizado.");
+
+    const response = await fetch(`${API_BASE}/api/budgets/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-pin': this.adminPin
+      },
+      body: JSON.stringify(budget)
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Error al editar el presupuesto.");
+    }
+
+    return true;
+  }
+
+  // Elimina un presupuesto en Railway
+  async deleteBudget(id) {
+    if (!this.isAdmin()) throw new Error("No autorizado.");
+
+    const response = await fetch(`${API_BASE}/api/budgets/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'x-admin-pin': this.adminPin
+      }
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Error al eliminar el presupuesto.");
     }
 
     return true;

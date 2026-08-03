@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Control de Aportes - Socios Restaurante & Pub</title>
-  <!-- SEO Meta Tags -->
-  <meta name="description" content="Sistema bimonetario para el control y registro de aportes de capital de socios con cotización en tiempo real de Dólar Blue.">
+  <title>Control de Aportes y Presupuestos - Pub/Restaurante</title>
+  <meta name="description" content="Sistema bimonetario para el control de aportes y desvíos de presupuesto de socios con cotización de Dólar Blue.">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -15,7 +14,7 @@
     <!-- CABECERA DE LA APP -->
     <header>
       <div class="brand-section">
-        <h1>Control de Aportes</h1>
+        <h1>Control Administrativo</h1>
         <p>Restaurante & Pub • Registro de Capital</p>
       </div>
       <div class="header-meta-widgets">
@@ -61,75 +60,155 @@
       </div>
     </section>
 
-    <!-- METAS POR SOCIO -->
-    <section class="partners-section">
-      <h2 class="partners-section-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-        Estado de Aportes por Socio (Meta: u$s 50.000 c/u)
-      </h2>
-      <div class="partners-grid" id="partners-grid">
-        <!-- Generado dinámicamente por JS -->
-      </div>
-    </section>
+    <!-- PESTAÑAS DE NAVEGACIÓN -->
+    <div class="tabs-container">
+      <button class="tab-btn active" data-tab="tab-aportes">Aportes de Capital</button>
+      <button class="tab-btn" data-tab="tab-presupuestos">Control de Presupuestos</button>
+    </div>
 
-    <!-- HISTORIAL DE MOVIMIENTOS -->
-    <section class="history-section">
-      <div class="history-header">
-        <div class="history-title-area">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          <h2 style="font-size:1.25rem; font-weight:600;">Historial de Aportes</h2>
+    <!-- ================= CONTENIDO TAB 1: APORTES ================= -->
+    <div id="tab-aportes" class="tab-content active">
+      <!-- METAS POR SOCIO -->
+      <section class="partners-section">
+        <h2 class="partners-section-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          Avance de Socios
+        </h2>
+        <div class="partners-grid" id="partners-grid">
+          <!-- Generado dinámicamente -->
         </div>
-        
-        <!-- Filtros -->
-        <div class="history-filters">
-          <select id="filter-socio" class="select-input">
-            <option value="">Todos los Socios</option>
-            <option value="Franco">Franco</option>
-            <option value="David">David</option>
-            <option value="Gabriel">Gabriel</option>
-            <option value="Sandra">Sandra</option>
-          </select>
-          <select id="filter-moneda" class="select-input">
-            <option value="">Todas las Monedas</option>
-            <option value="USD">USD ($)</option>
-            <option value="ARS">ARS ($)</option>
-          </select>
-          <select id="filter-fase" class="select-input">
-            <option value="">Todas las Fases</option>
-            <option value="Fase 1: Alquiler e Infraestructura">Fase 1: Alquiler/Obra</option>
-            <option value="Fase 2: Muebles y Decoración">Fase 2: Muebles/Deco</option>
-            <option value="Fase 3: Equipamiento de Barra y Cocina">Fase 3: Barra/Cocina</option>
-            <option value="Fase 4: Insumos y Trámites">Fase 4: Insumos/Gastos</option>
-          </select>
+      </section>
+
+      <!-- HISTORIAL DE APORTES -->
+      <section class="history-section">
+        <div class="history-header">
+          <div class="history-title-area">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <h2 style="font-size:1.25rem; font-weight:600;">Historial de Aportes</h2>
+          </div>
+          
+          <div class="history-filters">
+            <select id="filter-socio" class="select-input">
+              <option value="">Todos los Socios</option>
+              <option value="Franco">Franco</option>
+              <option value="David">David</option>
+              <option value="Gabriel">Gabriel</option>
+              <option value="Sandra">Sandra</option>
+            </select>
+            <select id="filter-moneda" class="select-input">
+              <option value="">Todas las Monedas</option>
+              <option value="USD">USD ($)</option>
+              <option value="ARS">ARS ($)</option>
+            </select>
+            <select id="filter-fase" class="select-input">
+              <option value="">Todas las Fases</option>
+              <option value="Fase 1: Alquiler e Infraestructura">Fase 1: Alquiler/Obra</option>
+              <option value="Fase 2: Muebles y Decoración">Fase 2: Muebles/Deco</option>
+              <option value="Fase 3: Equipamiento de Barra y Cocina">Fase 3: Barra/Cocina</option>
+              <option value="Fase 4: Insumos y Trámites">Fase 4: Insumos/Gastos</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      <!-- Vista Desktop (Tabla) -->
-      <div class="table-wrapper">
-        <table class="history-table">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Socio</th>
-              <th>Fase</th>
-              <th>Concepto</th>
-              <th>Monto Original</th>
-              <th>Cotización Dólar</th>
-              <th>Equivalente USD</th>
-              <th class="admin-only hidden" style="text-align:right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="history-table-body">
-            <!-- Cargado por JS -->
-          </tbody>
-        </table>
-      </div>
+        <div class="table-wrapper">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Socio</th>
+                <th>Fase</th>
+                <th>Concepto</th>
+                <th>Monto Original</th>
+                <th>Cotización Dólar</th>
+                <th>Equivalente USD</th>
+                <th class="admin-only hidden" style="text-align:right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <!-- Cargado dinámicamente -->
+            </tbody>
+          </table>
+        </div>
 
-      <!-- Vista Móvil (Lista de Tarjetas) -->
-      <div class="mobile-history-list" id="mobile-history-list">
-        <!-- Cargado por JS -->
-      </div>
-    </section>
+        <div class="mobile-history-list" id="mobile-history-list">
+          <!-- Cargado dinámicamente -->
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= CONTENIDO TAB 2: PRESUPUESTOS ================= -->
+    <div id="tab-presupuestos" class="tab-content hidden">
+      <!-- RESUMEN DE PRESUPUESTO -->
+      <section class="global-summary-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(22, 30, 49, 0.7) 100%); border-color: rgba(16, 185, 129, 0.25);">
+        <div class="global-summary-grid">
+          <div class="global-stats">
+            <div class="stat-group">
+              <span class="stat-label">Total Presupuestado (USD equiv.)</span>
+              <span class="stat-value-large" id="budget-total-usd">u$s 0</span>
+            </div>
+            <div class="progress-container" style="background: rgba(255, 255, 255, 0.03);">
+              <div class="progress-bar-fill" id="budget-progress-fill" style="background: linear-gradient(90deg, var(--success) 0%, var(--primary) 100%);"></div>
+            </div>
+            <div class="stat-group">
+              <span class="stat-label">Total Aportado/Pagado (USD equiv.)</span>
+              <span class="stat-value-large" style="font-size: 1.25rem; font-weight: 500;" id="budget-spent-usd">u$s 0</span>
+            </div>
+          </div>
+          <div class="sub-stats-row">
+            <div class="sub-stat-card">
+              <div class="sub-stat-title">Falta Financiar</div>
+              <div class="sub-stat-val text-warning" id="budget-pending-usd">u$s 0</div>
+            </div>
+            <div class="sub-stat-card">
+              <div class="sub-stat-title">Desvío / Excedente</div>
+              <div class="sub-stat-val text-success" id="budget-deviation-usd">u$s 0</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TABLA COMPARATIVA DE PRESUPUESTOS -->
+      <section class="history-section">
+        <div class="history-header">
+          <div class="history-title-area">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            <h2 style="font-size:1.25rem; font-weight:600;">Control de Costos Presupuestados</h2>
+          </div>
+          <div class="history-filters">
+            <select id="filter-budget-fase" class="select-input">
+              <option value="">Todas las Fases</option>
+              <option value="Fase 1: Alquiler e Infraestructura">Fase 1: Alquiler/Obra</option>
+              <option value="Fase 2: Muebles y Decoración">Fase 2: Muebles/Deco</option>
+              <option value="Fase 3: Equipamiento de Barra y Cocina">Fase 3: Barra/Cocina</option>
+              <option value="Fase 4: Insumos y Trámites">Fase 4: Insumos/Gastos</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Concepto / Ítem</th>
+                <th>Fase / Rubro</th>
+                <th>Presupuesto (Orig.)</th>
+                <th>Aportado (Real)</th>
+                <th>Saldo Restante</th>
+                <th>Estado (% Avance)</th>
+                <th class="admin-only hidden" style="text-align:right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="budget-table-body">
+              <!-- Cargado dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mobile-history-list" id="mobile-budget-list">
+          <!-- Cargado dinámicamente -->
+        </div>
+      </section>
+    </div>
 
   </div>
 
@@ -145,6 +224,10 @@
     <button class="btn admin-only hidden" id="btn-add-tx">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       + Aporte
+    </button>
+    <button class="btn admin-only hidden" id="btn-add-budget" style="background:var(--success);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      + Presupuesto
     </button>
   </div>
 
@@ -193,7 +276,15 @@
           </div>
 
           <div class="form-group">
-            <label for="tx-concept">Concepto / Detalle del Gasto o Aporte</label>
+            <label for="tx-budget-id">Asociar a Ítem Presupuestado (Opcional)</label>
+            <select id="tx-budget-id" class="select-input" style="width: 100%">
+              <option value="">Ninguno / Aporte de Capital General</option>
+              <!-- Cargado dinámicamente -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="tx-concept">Concepto / Detalle del Gasto</label>
             <input type="text" id="tx-concept" class="text-input" style="width: 100%" placeholder="Ej: Alquiler del Local, compra de cemento, etc." required list="concept-suggestions">
             <datalist id="concept-suggestions">
               <option value="Aporte de Capital Inicial">
@@ -236,6 +327,61 @@
     </div>
   </div>
 
+  <!-- MODAL: REGISTRO DE PRESUPUESTO (AGREGAR/EDITAR PRESUPUESTO) -->
+  <div class="modal-overlay" id="modal-budget">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-bg-title">Nuevo Presupuesto Estimado</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <form id="budget-form">
+        <div class="modal-body">
+          <input type="hidden" id="bg-id">
+          
+          <div class="form-group">
+            <label for="bg-concept">Concepto / Nombre del Ítem</label>
+            <input type="text" id="bg-concept" class="text-input" style="width: 100%" placeholder="Ej: Insonorización, Heladeras, Mesas y Sillas" required>
+          </div>
+
+          <div class="form-group">
+            <label for="bg-phase">Fase / Categoría</label>
+            <select id="bg-phase" class="select-input" style="width: 100%" required>
+              <option value="Fase 1: Alquiler e Infraestructura">Fase 1: Alquiler e Infraestructura</option>
+              <option value="Fase 2: Muebles y Decoración">Fase 2: Muebles y Decoración</option>
+              <option value="Fase 3: Equipamiento de Barra y Cocina">Fase 3: Equipamiento de Barra y Cocina</option>
+              <option value="Fase 4: Insumos y Trámites">Fase 4: Insumos y Trámites de Apertura</option>
+            </select>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="bg-currency">Moneda de Estimación</label>
+              <select id="bg-currency" class="select-input" style="width: 100%" required>
+                <option value="USD">Dólares (USD)</option>
+                <option value="ARS">Pesos (ARS)</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="bg-amount">Monto del Presupuesto</label>
+              <input type="number" id="bg-amount" class="text-input" style="width: 100%" placeholder="Ej: 1500" min="0.01" step="any" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="bg-date">Fecha de Estimación</label>
+            <input type="date" id="bg-date" class="text-input" style="width: 100%" required>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close" type="button">Cancelar</button>
+          <button class="btn" type="submit" id="bg-submit-btn">Guardar Presupuesto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: LOGIN DE ADMINISTRADOR -->
   <div class="modal-overlay" id="modal-login">
     <div class="modal-container" style="max-width: 380px;">
@@ -271,7 +417,7 @@
           <div class="form-group">
             <label for="cfg-new-pin">Nuevo PIN de Acceso</label>
             <input type="password" id="cfg-new-pin" class="text-input" style="width: 100%; text-align: center; font-size: 1.5rem; letter-spacing: 5px;" placeholder="••••" required maxlength="10" minlength="4">
-            <span class="form-helper">El PIN debe ser numérico o alfanumérico de al menos 4 dígitos. Se actualizará en la base de datos de Railway.</span>
+            <span class="form-helper">El PIN debe ser de al menos 4 dígitos. Se actualizará en la base de datos de Railway.</span>
           </div>
         </div>
         <div class="modal-footer">

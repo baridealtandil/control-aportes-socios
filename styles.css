@@ -206,6 +206,45 @@ header {
   margin-top: 4px;
 }
 
+/* Pestañas de Navegación */
+.tabs-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 25px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+  overflow-x: auto;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px 18px;
+  border-radius: 10px;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tab-btn.active {
+  color: var(--primary-light);
+  background: rgba(99, 102, 241, 0.1);
+  box-shadow: inset 0 -2px 0 var(--primary-light);
+}
+
+.tab-content.hidden {
+  display: none !important;
+}
+
 /* Grid de Socios */
 .partners-section-title {
   font-size: 1.25rem;
@@ -341,13 +380,14 @@ header {
   justify-content: space-between;
 }
 
-/* Sección de Historial */
+/* Sección de Historial y Presupuestos */
 .history-section {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   padding: 20px;
   box-shadow: var(--shadow-sm);
+  margin-bottom: 25px;
 }
 
 .history-header {
@@ -377,6 +417,27 @@ header {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* Alertas de Desviación */
+.badge-desviacion {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.badge-desviacion.overspent {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-desviacion.underspent {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success-light);
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 /* Controles de Formulario */
