@@ -140,7 +140,7 @@ function loadBudgetSelectOptions() {
     phases[phaseName].forEach(b => {
       const option = document.createElement("option");
       option.value = b.id;
-      const amtFormatted = b.currency === "USD" ? `u$s ${b.amount}` : `$ ${b.amount} ARS`;
+      const amtFormatted = b.currency === "USD" ? `USD ${formatNumber(b.amount)}` : `$ ${formatNumber(b.amount)} ARS`;
       option.textContent = `${b.concept} (${amtFormatted})`;
       group.appendChild(option);
     });
@@ -418,7 +418,7 @@ function calculateAndRenderBudgetDashboard() {
     devElement.textContent = `-${formatCurrency(Math.abs(deviation), "USD")} (Bajo Estimado)`;
   } else {
     devElement.className = "sub-stat-val text-muted";
-    devElement.textContent = `u$s 0 (Equilibrado)`;
+    devElement.textContent = `USD 0 (Equilibrado)`;
   }
 
   // Barra de progreso del presupuesto financiado
@@ -912,10 +912,11 @@ function handleLoginAction() {
 
 // 15. HELPERS DE FORMATEO
 function formatCurrency(amount, currency) {
+  const formatted = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(amount);
   if (currency === "USD") {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
+    return `USD ${formatted}`;
   } else {
-    return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(amount);
+    return `$ ${formatted} ARS`;
   }
 }
 
