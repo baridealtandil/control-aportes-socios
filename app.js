@@ -58,16 +58,18 @@ async function loadState() {
   const labelStatus = document.getElementById("widget-cloud-status");
 
   try {
-    // Obtener transacciones, presupuestos y categorías en paralelo
-    const [transactions, budgets, categories] = await Promise.all([
+    // Obtener transacciones, presupuestos, categorías y meta global en paralelo
+    const [transactions, budgets, categories, targetBudget] = await Promise.all([
       window.AppStorage.getData(),
       window.AppStorage.getBudgets(),
-      window.AppStorage.getCategories()
+      window.AppStorage.getCategories(),
+      window.AppStorage.getTargetBudget()
     ]);
     
     state.transactions = transactions;
     state.budgets = budgets;
     state.categories = categories;
+    state.targetBudget = targetBudget;
     
     labelStatus.innerHTML = `Base de datos: <span class="text-success">Online (PG)</span>`;
   } catch (e) {
@@ -211,13 +213,14 @@ function calculateAndRenderDashboard() {
 
   state.partnerStats = partnerStats;
 
-  const progressPercent = Math.min((totalUSDCollected / TOTAL_PROJECT_TARGET) * 100, 100).toFixed(1);
+  const targetBudget = state.targetBudget || 200000;
+  const progressPercent = Math.min((totalUSDCollected / targetBudget) * 100, 100).toFixed(1);
   
   document.getElementById("dash-progress-fill").style.width = `${progressPercent}%`;
   document.getElementById("dash-progress-text").textContent = `${progressPercent}%`;
   
   document.getElementById("dash-total-usd").textContent = formatCurrency(totalUSDCollected, "USD");
-  document.getElementById("dash-target-usd").textContent = formatCurrency(TOTAL_PROJECT_TARGET, "USD");
+  document.getElementById("dash-target-usd").textContent = formatCurrency(targetBudget, "USD");
   
   document.getElementById("dash-usd-direct").textContent = formatCurrency(totalUSDDirect, "USD");
   document.getElementById("dash-ars-equiv").textContent = `${formatCurrency(totalARSCollected, "ARS")} (equiv. ${formatCurrency(totalUSDCollected - totalUSDDirect, "USD")})`;
@@ -402,11 +405,14 @@ function calculateAndRenderBudgetDashboard() {
 
   const pending = Math.max(totalBudgetUSD - totalSpentUSD, 0);
   const deviation = totalSpentUSD - totalBudgetUSD;
+  const targetBudget = state.targetBudget || 200000;
+  const unallocated = Math.max(targetBudget - totalBudgetUSD, 0);
 
   // Actualizar UI
   document.getElementById("budget-total-usd").textContent = formatCurrency(totalBudgetUSD, "USD");
   document.getElementById("budget-spent-usd").textContent = formatCurrency(totalSpentUSD, "USD");
   document.getElementById("budget-pending-usd").textContent = formatCurrency(pending, "USD");
+  document.getElementById("budget-unallocated-usd").textContent = formatCurrency(unallocated, "USD");
   
   const devElement = document.getElementById("budget-deviation-usd");
   devElement.textContent = formatCurrency(Math.abs(deviation), "USD");
@@ -1074,5 +1080,28 @@ function initEventListeners() {
     container.addEventListener("click", (e) => {
       e.stopPropagation();
     });
+  });
+
+  // Editar Meta Global del Proyecto
+  document.getElementById("btn-edit-target-budget").addEventListener("click", async () => {
+    if (!window.AppStorage.isAdmin()) return;
+    const current = state.targetBudget || 200000;
+    const input = prompt("Ingresa el monto de la Meta Global del Proyecto en USD (ej: 250000):", current);
+    if (input === null) return;
+    
+    const parsed = parseFloat(input);
+    if (isNaN(parsed) || parsed <= 0) {
+      alert("Por favor ingresa un número válido mayor a 0.");
+      return;
+    }
+    
+    try {
+      await window.AppStorage.updateTargetBudget(parsed);
+      await loadState();
+      renderAll();
+      alert("Meta global actualizada con éxito.");
+    } catch (e) {
+      alert(e.message);
+    }
   });
 }

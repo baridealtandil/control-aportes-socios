@@ -283,6 +283,44 @@ class StorageAdapter {
 
     return true;
   }
+
+  // ================= CONFIGURACIÓN / META GLOBAL =================
+
+  // Obtiene la meta global del proyecto
+  async getTargetBudget() {
+    try {
+      const response = await fetch(`${API_BASE}/api/config/target-budget`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.targetBudget || 200000;
+      }
+      return 200000;
+    } catch (e) {
+      console.error("Fallo al obtener la meta global:", e);
+      return 200000;
+    }
+  }
+
+  // Modifica la meta global del proyecto en Railway
+  async updateTargetBudget(value) {
+    if (!this.isAdmin()) throw new Error("No autorizado.");
+
+    const response = await fetch(`${API_BASE}/api/config/target-budget`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-pin': this.adminPin
+      },
+      body: JSON.stringify({ targetBudget: parseFloat(value) })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Error al actualizar la meta global.");
+    }
+
+    return true;
+  }
 }
 
 // Exportar de forma global

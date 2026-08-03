@@ -253,7 +253,7 @@ header {
 
 @media(min-width: 576px) {
   .sub-stats-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 15px;
   }
 }

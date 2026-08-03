@@ -49,7 +49,7 @@
             <div class="progress-bar-fill" id="dash-progress-fill"></div>
           </div>
           <div class="stat-group">
-            <span class="stat-label">Meta Global del Proyecto (USD 50k x 4)</span>
+            <span class="stat-label">Meta Global del Proyecto <button class="btn-edit-target admin-only hidden" id="btn-edit-target-budget" style="background:none; border:none; color:var(--primary-light); cursor:pointer; padding:2px; font-size:0.8rem; margin-left: 5px;" title="Editar Meta Global">✏️</button></span>
             <span class="stat-value-large" id="dash-target-usd">USD 200.000</span>
           </div>
         </div>
@@ -166,6 +166,10 @@
             <div class="sub-stat-card">
               <div class="sub-stat-title">Desvío / Excedente</div>
               <div class="sub-stat-val text-success" id="budget-deviation-usd">USD 0</div>
+            </div>
+            <div class="sub-stat-card">
+              <div class="sub-stat-title">Sin Asignar (Disponible)</div>
+              <div class="sub-stat-val text-info" id="budget-unallocated-usd" style="color: #60a5fa;">USD 0</div>
             </div>
           </div>
         </div>
