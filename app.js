@@ -1447,7 +1447,14 @@ function renderEqualizationBoard() {
     if (totalARS > maxARS) maxARS = totalARS;
   });
 
-  PARTNERS.forEach(p => {
+  // Ordenar socios de MAYOR A MENOR APORTANTE (líder primero)
+  const sortedPartners = [...PARTNERS].sort((a, b) => {
+    const totalUsdA = stats[a] ? stats[a].totalUsdValue : 0;
+    const totalUsdB = stats[b] ? stats[b].totalUsdValue : 0;
+    return totalUsdB - totalUsdA;
+  });
+
+  sortedPartners.forEach(p => {
     const totalUSD = stats[p] ? parseFloat(stats[p].totalUsdValue.toFixed(2)) : 0;
     const diffUSD = Math.max(parseFloat((maxUSD - totalUSD).toFixed(2)), 0);
     const diffARS = Math.max(Math.round(maxARS - partnerArsValues[p]), 0);
@@ -1470,30 +1477,23 @@ function renderEqualizationBoard() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><strong>${p}</strong></td>
-      <td style="font-weight:600">${formatCurrency(totalUSD, "USD")}</td>
       <td>${diffText}</td>
       <td>${statusBadge}</td>
     `;
     tbody.appendChild(tr);
 
-    // ── TARJETA MÓVIL ─────────────────────────────────────────
+    // ── TARJETA MÓVIL (SOLO IMPORTE FALTANTE PARA IGUALAR) ─────
     if (mobileList) {
       const card = document.createElement("div");
       card.className = "mobile-tx-card";
       card.innerHTML = `
-        <div class="mobile-tx-header">
-          <span class="mobile-tx-partner">${p}</span>
+        <div class="mobile-tx-header" style="margin-bottom:8px;">
+          <span class="mobile-tx-partner" style="font-size:1.05rem;">${p}</span>
           <span>${statusBadge}</span>
         </div>
-        <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;font-size:0.88rem;">
-          <div style="display:flex;justify-content:space-between;">
-            <span style="color:var(--text-muted)">Total aportado</span>
-            <strong>${formatCurrency(totalUSD, "USD")}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="color:var(--text-muted)">Falta nivelar</span>
-            <span>${diffText}</span>
-          </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; padding-top:4px;">
+          <span style="color:var(--text-muted);">Falta igualar</span>
+          <span>${diffText}</span>
         </div>
       `;
       mobileList.appendChild(card);
