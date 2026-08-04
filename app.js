@@ -1837,12 +1837,12 @@ function renderGanttPhases(rateToday) {
       phaseTasks.forEach(t => {
         const isDone = t.progress >= 100;
         const adminControls = isAdmin ? `
-          <div style="display:flex; align-items:center; gap:4px; margin-top:6px;">
-            <span style="font-size:0.75rem; color:var(--text-muted);">Actualizar avance:</span>
-            <button onclick="changeTaskProgress('${t.id}', 0)" style="background:${t.progress===0?'var(--primary)':'rgba(255,255,255,0.08)'}; border:none; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.72rem; cursor:pointer;">0%</button>
-            <button onclick="changeTaskProgress('${t.id}', 50)" style="background:${t.progress===50?'var(--primary)':'rgba(255,255,255,0.08)'}; border:none; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.72rem; cursor:pointer;">50%</button>
-            <button onclick="changeTaskProgress('${t.id}', 100)" style="background:${t.progress===100?'var(--success)':'rgba(255,255,255,0.08)'}; border:none; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.72rem; cursor:pointer;">100%</button>
-            <button onclick="removeProjectTask('${t.id}')" style="background:none; border:none; color:#f87171; cursor:pointer; font-size:0.85rem; margin-left:6px;" title="Eliminar tarea">🗑️</button>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;">
+            <button onclick="changeTaskProgress('${t.id}', Math.max(0, parseInt('${t.progress}',10) - 10))" style="background:rgba(255,255,255,0.08); border:1px solid var(--border-color); color:#fff; padding:3px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer;" title="Restar 10%">-10%</button>
+            <input type="range" min="0" max="100" step="10" value="${t.progress}" onchange="changeTaskProgress('${t.id}', this.value)" style="flex:1; min-width:90px; accent-color:var(--primary-light); cursor:pointer;">
+            <button onclick="changeTaskProgress('${t.id}', Math.min(100, parseInt('${t.progress}',10) + 10))" style="background:rgba(255,255,255,0.08); border:1px solid var(--border-color); color:#fff; padding:3px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer;" title="Sumar 10%">+10%</button>
+            <button onclick="changeTaskProgress('${t.id}', 100)" style="background:${t.progress===100?'var(--success)':'rgba(16,185,129,0.2)'}; border:none; color:${t.progress===100?'#fff':'#34d399'}; padding:3px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:600;">100%</button>
+            <button onclick="removeProjectTask('${t.id}')" style="background:none; border:none; color:#f87171; cursor:pointer; font-size:0.85rem; margin-left:auto;" title="Eliminar tarea">🗑️</button>
           </div>
         ` : '';
 
