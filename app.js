@@ -1009,11 +1009,11 @@ function handleLoginAction() {
   }
 }
 
-// Lógica de acceso por 4 toques seguidos
+// Lógica de acceso por 4 toques seguidos (Ingreso directo como Admin sin contraseña)
 let adminTapCount = 0;
 let adminTapTimer = null;
 
-function handleAdmin4Tap(e) {
+async function handleAdmin4Tap(e) {
   if (e) e.preventDefault();
   
   if (window.AppStorage.isAdmin()) {
@@ -1025,11 +1025,18 @@ function handleAdmin4Tap(e) {
 
   if (adminTapCount >= 4) {
     adminTapCount = 0;
-    document.getElementById("login-pin").value = "";
-    openModal("modal-login");
+    // Autenticar directamente con el PIN guardado o default
+    const pin = localStorage.getItem("control_socios_admin_pin") || "1234";
+    const ok = await window.AppStorage.login(pin);
+    if (ok) {
+      renderAll();
+      showToast("Modo Administrador activado");
+    } else {
+      // Fallback si cambió el PIN en el backend
+      document.getElementById("login-pin").value = "";
+      openModal("modal-login");
+    }
   } else {
-    const remaining = 4 - adminTapCount;
-    showToast(`Toca ${remaining} vez${remaining > 1 ? 'es' : ''} más para ingresar como Admin...`);
     adminTapTimer = setTimeout(() => {
       adminTapCount = 0;
     }, 2500);

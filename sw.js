@@ -3,8 +3,8 @@
 // Estrategia: Network First con fallback a caché
 // ============================================================
 
-const CACHE_NAME = 'paca-bar-v4';
-const STATIC_CACHE = 'paca-bar-static-v4';
+const CACHE_NAME = 'paca-bar-v5';
+const STATIC_CACHE = 'paca-bar-static-v5';
 
 // Recursos estáticos que se cachean al instalar
 const STATIC_ASSETS = [
