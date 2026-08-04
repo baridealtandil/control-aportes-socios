@@ -1253,6 +1253,10 @@ function initEventListeners() {
     renderBudgets();
   });
 
+  // Compartir por WhatsApp
+  const btnShare = document.getElementById("btn-share-whatsapp");
+  if (btnShare) btnShare.addEventListener("click", shareWhatsAppSummary);
+
   // Filtros
   document.getElementById("filter-socio").addEventListener("change", renderTransactions);
   document.getElementById("filter-moneda").addEventListener("change", renderTransactions);
@@ -1275,6 +1279,11 @@ function initEventListeners() {
         content.classList.add("hidden");
       });
       document.getElementById(tabId).classList.remove("hidden");
+
+      // Si se abre la pestaña de gráficos, renderizar / actualizar gráficos
+      if (tabId === "tab-graficos") {
+        renderCharts();
+      }
 
       // Actualizar visibilidad de botones sticky
       toggleTabButtons();
@@ -1499,4 +1508,231 @@ function renderEqualizationBoard() {
       mobileList.appendChild(card);
     }
   });
+}
+
+// 18. COMPARTIR RESUMEN DEL PROYECTO POR WHATSAPP
+function shareWhatsAppSummary() {
+  const stats = state.partnerStats || {};
+  const rateToday = state.dolarBlue.promedio || 1545;
+  const targetBudget = state.targetBudget || 200000;
+  
+  let totalUSD = 0;
+  let totalUSDDirect = 0;
+  let totalARS = 0;
+  
+  state.transactions.forEach(tx => {
+    const amt = parseFloat(tx.amount);
+    const rate = parseFloat(tx.rate || 1);
+    if (tx.currency === "USD") {
+      totalUSDDirect += amt;
+      totalUSD += amt;
+    } else {
+      const rateUsed = rate > 1 ? rate : rateToday;
+      totalARS += amt;
+      totalUSD += (amt / rateUsed);
+    }
+  });
+
+  const progressPercent = Math.min((totalUSD / targetBudget) * 100, 100).toFixed(1);
+  const dateFormatted = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  // Encontrar máximo aportante
+  let maxPartner = "";
+  let maxUSD = 0;
+  PARTNERS.forEach(p => {
+    const pUSD = stats[p] ? stats[p].totalUsdValue : 0;
+    if (pUSD > maxUSD) { maxUSD = pUSD; maxPartner = p; }
+  });
+
+  let partnerLines = PARTNERS.map(p => {
+    const pStats = stats[p] || { totalUsdValue: 0 };
+    const pUsd = pStats.totalUsdValue || 0;
+    const isLeader = p === maxPartner && maxUSD > 0;
+    const icon = isLeader ? '👑' : (pUsd > 0 ? '🔹' : '⚪');
+    const pPct = ((pUsd / TARGET_PER_PARTNER) * 100).toFixed(1);
+    return `${icon} *${p}:* USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(pUsd)} (${pPct}% de meta)`;
+  }).join('\n');
+
+  let text = `📊 *PACA BAR — Resumen General del Proyecto*\n`;
+  text += `🗓️ _Fecha: ${dateFormatted}_\n\n`;
+  text += `💰 *TOTAL RECAUDADO:* USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(totalUSD)} (${progressPercent}% de meta)\n`;
+  text += `🎯 *META GLOBAL:* USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(targetBudget)}\n\n`;
+  text += `💵 *Aporte Dólares:* USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(totalUSDDirect)}\n`;
+  text += `🇦🇷 *Aporte Pesos:* $ ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(totalARS)} ARS\n`;
+  text += `📈 *Cotización Dólar Blue:* $ ${rateToday} ARS\n\n`;
+  text += `👥 *AVANCE POR SOCIO:*\n${partnerLines}\n\n`;
+  text += `🔗 _Control de Aportes — Paca Bar_\nhttps://control-aportes-socios.vercel.app/`;
+
+  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+}
+
+// 19. RENDERIZAR GRÁFICOS E INDICADORES (CHART.JS)
+let partnerChart = null;
+let currencyChart = null;
+let budgetChart = null;
+
+function renderCharts() {
+  if (typeof Chart === 'undefined') return;
+
+  const stats = state.partnerStats || {};
+  const rateToday = state.dolarBlue.promedio || 1545;
+  const targetBudget = state.targetBudget || 200000;
+
+  // 1. KPIs
+  let totalUSD = 0;
+  let totalUSDDirect = 0;
+  let totalARS = 0;
+  let totalRateSum = 0;
+  let rateCount = 0;
+
+  state.transactions.forEach(tx => {
+    const amt = parseFloat(tx.amount);
+    const rate = parseFloat(tx.rate || 1);
+    if (tx.currency === "USD") {
+      totalUSDDirect += amt;
+      totalUSD += amt;
+    } else {
+      const rateUsed = rate > 1 ? rate : rateToday;
+      totalARS += amt;
+      totalUSD += (amt / rateUsed);
+      totalRateSum += rateUsed;
+      rateCount++;
+    }
+  });
+
+  const activePartnersCount = PARTNERS.length || 4;
+  const avgPerPartner = totalUSD / activePartnersCount;
+  const avgRate = rateCount > 0 ? Math.round(totalRateSum / rateCount) : rateToday;
+  const progressPercent = Math.min((totalUSD / targetBudget) * 100, 100).toFixed(1);
+
+  const kpiAvg = document.getElementById("kpi-avg-partner");
+  const kpiRate = document.getElementById("kpi-avg-rate");
+  const kpiProg = document.getElementById("kpi-global-progress");
+
+  if (kpiAvg) kpiAvg.textContent = `USD ${formatNumber(avgPerPartner)}`;
+  if (kpiRate) kpiRate.textContent = `$ ${formatNumber(avgRate)} ARS`;
+  if (kpiProg) kpiProg.textContent = `${progressPercent}%`;
+
+  // Chart 1: Partner Ring Chart (Anillo por Socio)
+  const ctxPartner = document.getElementById("chart-partners-ring");
+  if (ctxPartner) {
+    if (partnerChart) partnerChart.destroy();
+    
+    const partnerData = PARTNERS.map(p => stats[p] ? parseFloat(stats[p].totalUsdValue.toFixed(2)) : 0);
+    
+    partnerChart = new Chart(ctxPartner, {
+      type: 'doughnut',
+      data: {
+        labels: PARTNERS,
+        datasets: [{
+          data: partnerData,
+          backgroundColor: ['#818cf8', '#34d399', '#fbbf24', '#f472b6'],
+          borderWidth: 2,
+          borderColor: '#161e31'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Outfit', size: 12 } } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.label}: USD ${formatNumber(ctx.raw)}`
+            }
+          }
+        },
+        cutout: '68%'
+      }
+    });
+  }
+
+  // Chart 2: Currency Doughnut (Anillo de Monedas)
+  const ctxCurrency = document.getElementById("chart-currency-doughnut");
+  if (ctxCurrency) {
+    if (currencyChart) currencyChart.destroy();
+
+    const arsInUsd = totalARS / rateToday;
+
+    currencyChart = new Chart(ctxCurrency, {
+      type: 'doughnut',
+      data: {
+        labels: ['Dólares Directos (USD)', 'Pesos Convertidos (ARS equiv.)'],
+        datasets: [{
+          data: [parseFloat(totalUSDDirect.toFixed(2)), parseFloat(arsInUsd.toFixed(2))],
+          backgroundColor: ['#10b981', '#6366f1'],
+          borderWidth: 2,
+          borderColor: '#161e31'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Outfit', size: 12 } } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.label}: USD ${formatNumber(ctx.raw)}`
+            }
+          }
+        },
+        cutout: '68%'
+      }
+    });
+  }
+
+  // Chart 3: Budget Execution Bars (Barras por Rubro)
+  const ctxBudget = document.getElementById("chart-budget-bars");
+  if (ctxBudget) {
+    if (budgetChart) budgetChart.destroy();
+
+    const phases = {};
+    state.categories.forEach(c => { phases[c.name.split(':')[0]] = { budgetUsd: 0, spentUsd: 0 }; });
+
+    state.budgets.forEach(b => {
+      const pName = b.phase.split(':')[0];
+      if (!phases[pName]) phases[pName] = { budgetUsd: 0, spentUsd: 0 };
+      const bAmtUsd = b.currency === "USD" ? parseFloat(b.amount) : parseFloat(b.amount) / rateToday;
+      phases[pName].budgetUsd += bAmtUsd;
+    });
+
+    state.transactions.forEach(t => {
+      if (t.budget_id) {
+        const b = state.budgets.find(bg => bg.id === t.budget_id);
+        if (b) {
+          const pName = b.phase.split(':')[0];
+          if (!phases[pName]) phases[pName] = { budgetUsd: 0, spentUsd: 0 };
+          const tAmtUsd = t.currency === "USD" ? parseFloat(t.amount) : parseFloat(t.amount) / (t.rate || rateToday);
+          phases[pName].spentUsd += tAmtUsd;
+        }
+      }
+    });
+
+    const labels = Object.keys(phases);
+    const budgetData = labels.map(l => parseFloat(phases[l].budgetUsd.toFixed(2)));
+    const spentData = labels.map(l => parseFloat(phases[l].spentUsd.toFixed(2)));
+
+    budgetChart = new Chart(ctxBudget, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Presupuestado (USD)', data: budgetData, backgroundColor: 'rgba(99, 102, 241, 0.7)', borderRadius: 6 },
+          { label: 'Financiado (USD)', data: spentData, backgroundColor: 'rgba(16, 185, 129, 0.85)', borderRadius: 6 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { ticks: { color: '#94a3b8', font: { family: 'Outfit' } }, grid: { display: false } },
+          y: { ticks: { color: '#94a3b8', font: { family: 'Outfit' } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { color: '#94a3b8', font: { family: 'Outfit' } } }
+        }
+      }
+    });
+  }
 }

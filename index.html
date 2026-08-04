@@ -27,6 +27,8 @@
   <link rel="shortcut icon" href="/icons/icon-96.png">
 
   <link rel="stylesheet" href="styles.css">
+  <!-- ── Chart.js CDN ── -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- ── Service Worker Registration ── -->
   <script>
@@ -83,6 +85,7 @@
       <button class="tab-btn" data-tab="tab-igualar">⚖️ Para Igualar</button>
       <button class="tab-btn" data-tab="tab-aportes">📜 Aportes</button>
       <button class="tab-btn" data-tab="tab-presupuestos">📊 Presupuestos</button>
+      <button class="tab-btn" data-tab="tab-graficos">📈 Gráficos</button>
     </div>
 
     <!-- BUSCADOR GLOBAL -->
@@ -94,9 +97,15 @@
     <!-- ================= TAB 1: INICIO (RESUMEN GENERAL DEL PROYECTO) ================= -->
     <div id="tab-inicio" class="tab-content active">
       <section class="global-summary-card">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-          <h2 style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin:0;">Resumen General del Proyecto</h2>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            <h2 style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin:0;">Resumen General del Proyecto</h2>
+          </div>
+          <button class="btn" id="btn-share-whatsapp" style="background:#25D366; color:#fff; border:none; padding:8px 14px; border-radius:10px; font-size:0.82rem; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; box-shadow:0 4px 12px rgba(37,211,102,0.25);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.121 4.094 4.103-1.077z"/></svg>
+            Compartir por WhatsApp
+          </button>
         </div>
         <div class="global-summary-grid">
           <div class="global-stats">
@@ -356,6 +365,58 @@
           <!-- Cargado dinámicamente -->
         </div>
       </section>
+    </div>
+
+    <!-- ================= TAB 7: GRÁFICOS E INDICADORES ================= -->
+    <div id="tab-graficos" class="tab-content hidden">
+      <!-- TARJETAS KPI -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:15px; margin-bottom:25px;">
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; text-align:center;">
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Aporte Promedio por Socio</div>
+          <div id="kpi-avg-partner" style="font-size:1.5rem; font-weight:700; color:var(--primary-light);">USD 0</div>
+        </div>
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; text-align:center;">
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Tipo de Cambio Aplicado (Prom.)</div>
+          <div id="kpi-avg-rate" style="font-size:1.5rem; font-weight:700; color:var(--success-light);">$ 0 ARS</div>
+        </div>
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; text-align:center;">
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">% Avance de Meta Global</div>
+          <div id="kpi-global-progress" style="font-size:1.5rem; font-weight:700; color:var(--warning);">0%</div>
+        </div>
+      </div>
+
+      <!-- GRID DE GRÁFICOS -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
+        <!-- GRÁFICO 1: Anillo de Aportes por Socio -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:15px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+            🍩 Participación por Socio (USD equiv.)
+          </h3>
+          <div style="position:relative; height:260px;">
+            <canvas id="chart-partners-ring"></canvas>
+          </div>
+        </div>
+
+        <!-- GRÁFICO 2: Anillo de Monedas (USD vs ARS) -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:15px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+            🔀 Distribución por Moneda (USD vs ARS)
+          </h3>
+          <div style="position:relative; height:260px;">
+            <canvas id="chart-currency-doughnut"></canvas>
+          </div>
+        </div>
+
+        <!-- GRÁFICO 3: Barras de Ejecución de Presupuesto por Rubro -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px; grid-column: 1 / -1;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:15px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+            📊 Ejecución por Rubro (Presupuestado vs Financiado)
+          </h3>
+          <div style="position:relative; height:280px;">
+            <canvas id="chart-budget-bars"></canvas>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>
