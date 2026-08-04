@@ -77,7 +77,7 @@ async function loadState() {
   }
 
   // Cargar selectores dinámicos de categorías
-  populateCategoryDropdowns();
+  renderCategories();
   
   // Cargar opciones en el select de transacciones (asociar a presupuesto)
   loadBudgetSelectOptions();
@@ -138,6 +138,8 @@ function renderCategories() {
   if (cats.includes(currentFilterTxVal)) filterTx.value = currentFilterTxVal;
   if (cats.includes(currentFilterBgVal)) filterBg.value = currentFilterBgVal;
 }
+
+const populateCategoryDropdowns = renderCategories;
 
 // Carga las opciones de presupuestos activos en el formulario de aportes
 function loadBudgetSelectOptions() {
