@@ -321,6 +321,83 @@ class StorageAdapter {
 
     return true;
   }
+  // ================= TAREAS Y AVANCE FÍSICO DEL PROYECTO =================
+
+  getProjectTasks() {
+    try {
+      const stored = localStorage.getItem("paca_project_tasks_v1");
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      console.error("Error al leer tareas del proyecto de localStorage:", e);
+    }
+    
+    // Tareas maestras iniciales por omisión
+    const defaultTasks = [
+      // FASE 1: OBRA CIVIL Y ESTRUCTURAS
+      { id: 'task-1', phase: 'Fase 1: Obra Civil y Estructuras', name: 'Planos, proyecto trifásico, estudio acústico y habilitaciones', progress: 0 },
+      { id: 'task-2', phase: 'Fase 1: Obra Civil y Estructuras', name: 'Reparación de techo de chapa + colocación de membrana impermeabilizante', progress: 0 },
+      { id: 'task-3', phase: 'Fase 1: Obra Civil y Estructuras', name: 'Restauración de fachada y reforma de ventanal para salida de emergenciavidriada con marco y antipánico', progress: 0 },
+      { id: 'task-4', phase: 'Fase 1: Obra Civil y Estructuras', name: 'Instalación eléctrica trifásica nueva completa desde cero (tableros, llaves y potencia)', progress: 0 },
+      { id: 'task-5', phase: 'Fase 1: Obra Civil y Estructuras', name: 'Plomería, cloacas y construcción 100% de cero de batería de baños (Damas, Caballeros, PMR)', progress: 0 },
+      { id: 'task-6', phase: 'Fase 1: Obra Civil y Estructuras', name: 'Albañilería de cocina industrial (azulejos, trampa de grasa, tiraje a 4 vientos) y Barra en L (6x5m)', progress: 0 },
+
+      // FASE 2: INSONORIZACIÓN, PISOS Y CLIMATIZACIÓN
+      { id: 'task-7', phase: 'Fase 2: Insonorización, Pisos y Climatización', name: 'Aislamiento acústico y fonoabsorción (cielorraso suspendido y lana de roca para recitales/bailable)', progress: 0 },
+      { id: 'task-8', phase: 'Fase 2: Insonorización, Pisos y Climatización', name: 'Retiro de piso flotante viejo, carpeta y colocación de piso nuevo (Microcemento/Hormigón pulido/Epoxi)', progress: 0 },
+      { id: 'task-9', phase: 'Fase 2: Insonorización, Pisos y Climatización', name: 'Montaje e instalación de 2 equipos comerciales de Aire Acondicionado Frío/Calor de gran tonelaje', progress: 0 },
+
+      // FASE 3: EQUIPAMIENTO DE FRÍO Y COCINA INDUSTRIAL
+      { id: 'task-10', phase: 'Fase 3: Equipamiento de Frío y Cocina', name: 'Montaje de cámara de frío para barriles + línea de 6 a 9 choperas + heladeras bajobarra y freezers', progress: 0 },
+      { id: 'task-11', phase: 'Fase 3: Equipamiento de Frío y Cocina', name: 'Instalación de equipamiento de cocina (freidoras 20L, plancha, horno convector, anafes, mesadas inox)', progress: 0 },
+
+      // FASE 4: TECNOLOGÍA, AUDIO, LUCES Y RED POS
+      { id: 'task-12', phase: 'Fase 4: Tecnología, Audio, Luces y POS', name: 'Instalación de sonido pesado (potencias, bafles, consola), luces robóticas DMX y cámaras de seguridad', progress: 0 },
+      { id: 'task-13', phase: 'Fase 4: Tecnología, Audio, Luces y POS', name: 'Red de datos, 2 computadoras de caja POS, 4 comanderas e instalación de 4-5 Smart TVs + Pantalla proyector', progress: 0 },
+
+      // FASE 5: MOBILIARIO, CRISTALERÍA, AMBIENTACIÓN Y APERTURA
+      { id: 'task-14', phase: 'Fase 5: Mobiliario, Ambientación y Apertura', name: 'Colocación de mesas de 2 y 4 personas, sillones/mesas living para VIP y banquetas altas de barra', progress: 0 },
+      { id: 'task-15', phase: 'Fase 5: Mobiliario, Ambientación y Apertura', name: 'Carteles Neón LED (fachada e interiores), vegetación temática, bazar (500 pintas, 400 vasos) y matafuegos', progress: 0 },
+      { id: 'task-16', phase: 'Fase 5: Mobiliario, Ambientación y Apertura', name: 'Uniformes del personal, branding, campaña de marketing de apertura y stock inicial de bebidas y barriles', progress: 0 }
+    ];
+
+    localStorage.setItem("paca_project_tasks_v1", JSON.stringify(defaultTasks));
+    return defaultTasks;
+  }
+
+  saveProjectTasks(tasks) {
+    localStorage.setItem("paca_project_tasks_v1", JSON.stringify(tasks));
+  }
+
+  addProjectTask(taskData) {
+    if (!this.isAdmin()) throw new Error("No autorizado.");
+    const tasks = this.getProjectTasks();
+    const newTask = {
+      id: `task-${Date.now()}`,
+      phase: taskData.phase,
+      name: taskData.name.trim(),
+      progress: parseInt(taskData.progress || 0, 10)
+    };
+    tasks.push(newTask);
+    this.saveProjectTasks(tasks);
+    return newTask;
+  }
+
+  updateProjectTaskProgress(id, progress) {
+    if (!this.isAdmin()) throw new Error("No autorizado.");
+    const tasks = this.getProjectTasks();
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.progress = Math.min(Math.max(parseInt(progress, 10), 0), 100);
+      this.saveProjectTasks(tasks);
+    }
+  }
+
+  deleteProjectTask(id) {
+    if (!this.isAdmin()) throw new Error("No autorizado.");
+    let tasks = this.getProjectTasks();
+    tasks = tasks.filter(t => t.id !== id);
+    this.saveProjectTasks(tasks);
+  }
 }
 
 // Exportar de forma global

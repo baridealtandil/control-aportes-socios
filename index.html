@@ -430,10 +430,15 @@
               <h3 style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin:0; display:flex; align-items:center; gap:8px;">
                 📑 Avance de la Obra y Ejecución por Fases (Cronograma / Gantt)
               </h3>
-              <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Progreso acumulado de financiamiento y ejecución según presupuesto</div>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Progreso acumulado de financiamiento y ejecución por tareas y fases de obra</div>
             </div>
-            <div id="gantt-overall-badge" style="font-size:0.85rem; font-weight:600; color:var(--success); background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); padding:4px 12px; border-radius:20px;">
-              0% Ejecutado
+            <div style="display:flex; align-items:center; gap:10px;">
+              <button class="btn admin-only hidden" id="btn-add-project-task" style="padding:6px 12px; font-size:0.82rem; background:var(--primary);">
+                + Nueva Tarea
+              </button>
+              <div id="gantt-overall-badge" style="font-size:0.85rem; font-weight:600; color:var(--success); background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); padding:4px 12px; border-radius:20px;">
+                0% Ejecutado
+              </div>
             </div>
           </div>
 
@@ -740,6 +745,43 @@
       <div class="modal-footer">
         <button class="btn btn-secondary modal-close" type="button">Cerrar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AGREGAR NUEVA TAREA DE OBRA/PROYECTO -->
+  <div class="modal-overlay" id="modal-project-task">
+    <div class="modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Nueva Tarea de Obra / Proyecto</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <form id="project-task-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="task-name">Nombre de la Tarea / Trabajo</label>
+            <input type="text" id="task-name" class="text-input" style="width: 100%;" placeholder="Ej: Armar tabique divisorio para cabina DJ" required>
+          </div>
+          <div class="form-group">
+            <label for="task-phase">Fase del Proyecto</label>
+
+            <select id="task-phase" class="select-input" style="width: 100%;" required>
+              <option value="Fase 1: Obra Civil y Estructuras">Fase 1: Obra Civil y Estructuras</option>
+              <option value="Fase 2: Insonorización, Pisos y Climatización">Fase 2: Insonorización, Pisos y Climatización</option>
+              <option value="Fase 3: Equipamiento de Frío y Cocina">Fase 3: Equipamiento de Frío y Cocina</option>
+              <option value="Fase 4: Tecnología, Audio, Luces y POS">Fase 4: Tecnología, Audio, Luces y POS</option>
+              <option value="Fase 5: Mobiliario, Ambientación y Apertura">Fase 5: Mobiliario, Ambientación y Apertura</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="task-progress">Avance Inicial (%)</label>
+            <input type="number" id="task-progress" class="text-input" style="width: 100%;" min="0" max="100" value="0" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close" type="button">Cancelar</button>
+          <button class="btn" type="submit">Guardar Tarea</button>
+        </div>
+      </form>
     </div>
   </div>
 

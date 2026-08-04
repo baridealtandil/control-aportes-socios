@@ -1253,6 +1253,35 @@ function initEventListeners() {
     renderBudgets();
   });
 
+  // Tareas de Obra del Proyecto
+  const btnAddTask = document.getElementById("btn-add-project-task");
+  if (btnAddTask) {
+    btnAddTask.addEventListener("click", () => {
+      document.getElementById("task-name").value = "";
+      document.getElementById("task-progress").value = "0";
+      openModal("modal-project-task");
+    });
+  }
+
+  const formTask = document.getElementById("project-task-form");
+  if (formTask) {
+    formTask.addEventListener("submit", (e) => {
+      e.preventDefault();
+      try {
+        const name = document.getElementById("task-name").value;
+        const phase = document.getElementById("task-phase").value;
+        const progress = document.getElementById("task-progress").value;
+        
+        window.AppStorage.addProjectTask({ phase, name, progress });
+        closeModal("modal-project-task");
+        renderCharts();
+        toast("Nueva tarea de obra agregada con éxito.");
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  }
+
   // Compartir por WhatsApp
   const btnShare = document.getElementById("btn-share-whatsapp");
   if (btnShare) btnShare.addEventListener("click", shareWhatsAppSummary);
@@ -1745,7 +1774,7 @@ function renderCharts() {
   renderGanttPhases(rateToday);
 }
 
-// 20. RENDERIZAR TIMELINE GANTT DE FASES DE OBRA
+// 20. RENDERIZAR TIMELINE GANTT DE FASES Y TAREAS DE OBRA
 function renderGanttPhases(rateToday) {
   const container = document.getElementById("gantt-phases-list");
   const overallBadge = document.getElementById("gantt-overall-badge");
@@ -1753,69 +1782,44 @@ function renderGanttPhases(rateToday) {
 
   container.innerHTML = "";
 
-  // Agrupar presupuestos y transacciones por fase (Categoría)
-  const phasesMap = {};
-  
-  state.categories.forEach(c => {
-    phasesMap[c.name] = { name: c.name, budgetUsd: 0, spentUsd: 0, itemsCount: 0 };
-  });
+  const isAdmin = window.AppStorage.isAdmin();
+  const tasks = window.AppStorage.getProjectTasks() || [];
 
-  state.budgets.forEach(b => {
-    const phaseKey = b.phase || "General";
-    if (!phasesMap[phaseKey]) {
-      phasesMap[phaseKey] = { name: phaseKey, budgetUsd: 0, spentUsd: 0, itemsCount: 0 };
-    }
-    const amtUsd = b.currency === "USD" ? parseFloat(b.amount) : parseFloat(b.amount) / rateToday;
-    phasesMap[phaseKey].budgetUsd += amtUsd;
-    phasesMap[phaseKey].itemsCount++;
-  });
+  // Fases definidas
+  const PHASES = [
+    "Fase 1: Obra Civil y Estructuras",
+    "Fase 2: Insonorización, Pisos y Climatización",
+    "Fase 3: Equipamiento de Frío y Cocina",
+    "Fase 4: Tecnología, Audio, Luces y POS",
+    "Fase 5: Mobiliario, Ambientación y Apertura"
+  ];
 
-  state.transactions.forEach(t => {
-    if (t.budget_id) {
-      const b = state.budgets.find(bg => bg.id === t.budget_id);
-      if (b && b.phase) {
-        const phaseKey = b.phase;
-        if (!phasesMap[phaseKey]) {
-          phasesMap[phaseKey] = { name: phaseKey, budgetUsd: 0, spentUsd: 0, itemsCount: 0 };
-        }
-        const tAmtUsd = t.currency === "USD" ? parseFloat(t.amount) : parseFloat(t.amount) / (t.rate || rateToday);
-        phasesMap[phaseKey].spentUsd += tAmtUsd;
-      }
-    }
-  });
+  let totalTasksCount = tasks.length;
+  let totalProgressSum = 0;
 
-  const phasesList = Object.values(phasesMap).filter(p => p.budgetUsd > 0 || p.spentUsd > 0);
+  tasks.forEach(t => { totalProgressSum += (t.progress || 0); });
 
-  let grandBudget = 0;
-  let grandSpent = 0;
+  const globalPhysicalPct = totalTasksCount > 0 ? (totalProgressSum / totalTasksCount).toFixed(1) : 0;
+  if (overallBadge) overallBadge.textContent = `🏗️ ${globalPhysicalPct}% Avance Físico Real`;
 
-  phasesList.forEach(p => {
-    grandBudget += p.budgetUsd;
-    grandSpent += p.spentUsd;
-  });
-
-  const overallPct = grandBudget > 0 ? Math.min((grandSpent / grandBudget) * 100, 100).toFixed(1) : 0;
-  if (overallBadge) overallBadge.textContent = `🎯 ${overallPct}% Ejecutado Total`;
-
-  if (phasesList.length === 0) {
-    container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Sin fases o presupuestos registrados aún.</div>`;
-    return;
-  }
-
-  phasesList.forEach((phase, index) => {
-    const pct = phase.budgetUsd > 0 ? Math.min((phase.spentUsd / phase.budgetUsd) * 100, 100).toFixed(1) : 0;
+  PHASES.forEach((phaseName, index) => {
+    const phaseTasks = tasks.filter(t => t.phase === phaseName);
     
+    let phaseProgressSum = 0;
+    phaseTasks.forEach(t => { phaseProgressSum += (t.progress || 0); });
+    const phasePct = phaseTasks.length > 0 ? (phaseProgressSum / phaseTasks.length).toFixed(1) : 0;
+
     let statusText = "Pendiente";
     let statusBg = "rgba(255,255,255,0.06)";
     let statusColor = "var(--text-muted)";
     let barColor = "var(--primary-light)";
 
-    if (pct >= 100) {
+    if (parseFloat(phasePct) >= 100) {
       statusText = "✅ Completado";
       statusBg = "rgba(16,185,129,0.15)";
       statusColor = "#34d399";
       barColor = "var(--success)";
-    } else if (pct > 0) {
+    } else if (parseFloat(phasePct) > 0) {
       statusText = "⚡ En Ejecución";
       statusBg = "rgba(99,102,241,0.15)";
       statusColor = "var(--primary-light)";
@@ -1823,28 +1827,83 @@ function renderGanttPhases(rateToday) {
     }
 
     const card = document.createElement("div");
-    card.style.cssText = "background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:12px; padding:16px;";
+    card.style.cssText = "background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:14px; padding:18px;";
+    
+    // Tareas HTML
+    let tasksHtml = "";
+    if (phaseTasks.length === 0) {
+      tasksHtml = `<div style="font-size:0.8rem; color:var(--text-muted); padding:6px 0;">Sin tareas registradas en esta fase aún.</div>`;
+    } else {
+      phaseTasks.forEach(t => {
+        const isDone = t.progress >= 100;
+        const adminControls = isAdmin ? `
+          <div style="display:flex; align-items:center; gap:4px; margin-top:6px;">
+            <span style="font-size:0.75rem; color:var(--text-muted);">Actualizar avance:</span>
+            <button onclick="changeTaskProgress('${t.id}', 0)" style="background:${t.progress===0?'var(--primary)':'rgba(255,255,255,0.08)'}; border:none; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.72rem; cursor:pointer;">0%</button>
+            <button onclick="changeTaskProgress('${t.id}', 50)" style="background:${t.progress===50?'var(--primary)':'rgba(255,255,255,0.08)'}; border:none; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.72rem; cursor:pointer;">50%</button>
+            <button onclick="changeTaskProgress('${t.id}', 100)" style="background:${t.progress===100?'var(--success)':'rgba(255,255,255,0.08)'}; border:none; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.72rem; cursor:pointer;">100%</button>
+            <button onclick="removeProjectTask('${t.id}')" style="background:none; border:none; color:#f87171; cursor:pointer; font-size:0.85rem; margin-left:6px;" title="Eliminar tarea">🗑️</button>
+          </div>
+        ` : '';
+
+        tasksHtml += `
+          <div style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:10px 12px; margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; flex-wrap:wrap; gap:6px;">
+              <span style="color:${isDone ? '#34d399' : 'var(--text-main)'}; font-weight:500;">
+                ${isDone ? '✅' : '📌'} ${t.name}
+              </span>
+              <strong style="font-size:0.82rem; color:${isDone ? '#34d399' : 'var(--primary-light)'}">${t.progress}%</strong>
+            </div>
+            <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; margin-top:6px;">
+              <div style="width:${t.progress}%; height:100%; background:${isDone ? 'var(--success)' : 'var(--primary-light)'}; transition:width 0.3s ease;"></div>
+            </div>
+            ${adminControls}
+          </div>
+        `;
+      });
+    }
+
     card.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-        <div style="font-weight:600; font-size:0.95rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-          <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; background:rgba(99,102,241,0.2); color:var(--primary-light); border-radius:50%; font-size:0.75rem;">${index + 1}</span>
-          ${phase.name}
+        <div style="font-weight:700; font-size:1rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+          <span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; background:rgba(99,102,241,0.2); color:var(--primary-light); border-radius:50%; font-size:0.8rem;">${index + 1}</span>
+          ${phaseName}
         </div>
-        <span style="font-size:0.75rem; padding:3px 10px; border-radius:20px; background:${statusBg}; color:${statusColor}; font-weight:600;">
-          ${statusText} (${pct}%)
+        <span style="font-size:0.78rem; padding:4px 12px; border-radius:20px; background:${statusBg}; color:${statusColor}; font-weight:600;">
+          ${statusText} (${phasePct}%)
         </span>
       </div>
 
-      <!-- Barra de Gantt -->
-      <div style="height:10px; background:rgba(255,255,255,0.06); border-radius:6px; overflow:hidden; margin:10px 0;">
-        <div style="width:${pct}%; height:100%; background:${barColor}; transition:width 0.5s ease; border-radius:6px;"></div>
+      <!-- Barra de Fase -->
+      <div style="height:10px; background:rgba(255,255,255,0.06); border-radius:6px; overflow:hidden; margin:10px 0 14px 0;">
+        <div style="width:${phasePct}%; height:100%; background:${barColor}; transition:width 0.5s ease; border-radius:6px;"></div>
       </div>
 
-      <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-muted); margin-top:6px;">
-        <span>Financiado: <strong style="color:var(--text-main)">USD ${formatNumber(Math.round(phase.spentUsd))}</strong></span>
-        <span>Presupuestado: <strong style="color:var(--text-main)">USD ${formatNumber(Math.round(phase.budgetUsd))}</strong></span>
+      <!-- Desglose de Tareas -->
+      <div style="margin-top:10px;">
+        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">
+          Tareas y Trabajos de esta Fase (${phaseTasks.length}):
+        </div>
+        ${tasksHtml}
       </div>
     `;
     container.appendChild(card);
   });
 }
+
+// Helpers globales para actualizar o eliminar tareas desde la interfaz
+window.changeTaskProgress = function(id, progress) {
+  if (!window.AppStorage.isAdmin()) return;
+  window.AppStorage.updateProjectTaskProgress(id, progress);
+  renderCharts();
+  toast(`Avance de tarea actualizado a ${progress}%`);
+};
+
+window.removeProjectTask = function(id) {
+  if (!window.AppStorage.isAdmin()) return;
+  if (confirm("¿Seguro que deseas eliminar esta tarea de obra?")) {
+    window.AppStorage.deleteProjectTask(id);
+    renderCharts();
+    toast("Tarea eliminada.");
+  }
+};
