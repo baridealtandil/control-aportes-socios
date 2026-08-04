@@ -10,8 +10,8 @@
   <link rel="manifest" href="/manifest.json">
 
   <!-- ── PWA: Theme & Status Bar ── -->
-  <meta name="theme-color" content="#6366f1">
-  <meta name="msapplication-TileColor" content="#0d1117">
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="msapplication-TileColor" content="#0b0f19">
   <meta name="msapplication-TileImage" content="/icons/icon-144.png">
 
   <!-- ── PWA: iOS / Safari ── -->
@@ -60,7 +60,7 @@
     
     <!-- CABECERA DE LA APP -->
     <header>
-      <div class="brand-section" style="display: flex; align-items: center; gap: 15px;">
+      <div class="brand-section admin-secret-target" id="header-brand-trigger" style="display: flex; align-items: center; gap: 15px; cursor: pointer; -webkit-tap-highlight-color: transparent;" title="Toca 4 veces seguidas para ingresar como Admin">
         <img src="logo.jpg" alt="Paca Bar Logo" style="height: 52px; border-radius: 6px; filter: invert(1); mix-blend-mode: screen; object-fit: contain;">
         <div>
           <h1 style="font-size: 1.6rem; margin: 0; line-height: 1.2;">Control de Aportes</h1>
@@ -75,7 +75,7 @@
         <div class="widget-pill" id="widget-cloud-status">
           Base de datos: <span class="text-warning">Cargando...</span>
         </div>
-        <div class="widget-pill admin-badge" id="admin-status-badge">
+        <div class="widget-pill admin-badge admin-secret-target" id="admin-status-badge" style="cursor: pointer;" title="Toca 4 veces seguidas para ingresar como Admin">
           Modo Socio (Solo Lectura)
         </div>
       </div>
@@ -355,8 +355,11 @@
 
   <!-- BARRA DE ACCIÓN FLOTANTE / STICKY EN CELULARES -->
   <div class="mobile-sticky-bar">
-    <button class="btn btn-secondary" id="login-action-btn">
-      Entrar como Admin
+    <button class="btn btn-secondary admin-secret-target" id="btn-secret-admin" title="Toca 4 veces seguidas para ingresar como Admin" style="padding: 8px 14px; opacity: 0.85;">
+      🔒 <span style="font-size: 0.75rem; margin-left: 2px;">(x4)</span>
+    </button>
+    <button class="btn btn-secondary admin-only hidden" id="login-action-btn" title="Cerrar sesión Admin">
+      Salir Admin
     </button>
     <button class="btn btn-secondary admin-only hidden" id="btn-pin-settings" title="Cambiar PIN">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>

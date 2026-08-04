@@ -693,15 +693,21 @@ function renderAdminUI() {
 
   const adminBadge = document.getElementById("admin-status-badge");
   const loginActionBtn = document.getElementById("login-action-btn");
+  const secretBtn = document.getElementById("btn-secret-admin");
   
   if (isAdmin) {
     adminBadge.classList.add("active");
     adminBadge.innerHTML = `<span style="display:inline-block;width:8px;height:8px;background:var(--success);border-radius:50%"></span> Administrador`;
-    loginActionBtn.innerHTML = `Salir Modo Admin`;
+    if (loginActionBtn) {
+      loginActionBtn.classList.remove("hidden");
+      loginActionBtn.innerHTML = `Salir Admin`;
+    }
+    if (secretBtn) secretBtn.classList.add("hidden");
   } else {
     adminBadge.classList.remove("active");
     adminBadge.textContent = "Modo Socio (Solo Lectura)";
-    loginActionBtn.innerHTML = `Entrar como Admin`;
+    if (loginActionBtn) loginActionBtn.classList.add("hidden");
+    if (secretBtn) secretBtn.classList.remove("hidden");
   }
 }
 
@@ -1003,6 +1009,53 @@ function handleLoginAction() {
   }
 }
 
+// Lógica de acceso por 4 toques seguidos
+let adminTapCount = 0;
+let adminTapTimer = null;
+
+function handleAdmin4Tap(e) {
+  if (e) e.preventDefault();
+  
+  if (window.AppStorage.isAdmin()) {
+    return; // Ya es admin
+  }
+
+  adminTapCount++;
+  if (adminTapTimer) clearTimeout(adminTapTimer);
+
+  if (adminTapCount >= 4) {
+    adminTapCount = 0;
+    document.getElementById("login-pin").value = "";
+    openModal("modal-login");
+  } else {
+    const remaining = 4 - adminTapCount;
+    showToast(`Toca ${remaining} vez${remaining > 1 ? 'es' : ''} más para ingresar como Admin...`);
+    adminTapTimer = setTimeout(() => {
+      adminTapCount = 0;
+    }, 2500);
+  }
+}
+
+// Notificación flotante Toast
+function showToast(message) {
+  let toast = document.getElementById("pwa-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "pwa-toast";
+    toast.style.cssText = "position:fixed;bottom:85px;left:50%;transform:translateX(-50%);background:rgba(99,102,241,0.95);color:#fff;padding:8px 18px;border-radius:20px;font-size:0.82rem;font-weight:500;z-index:10000;transition:all 0.25s ease;box-shadow:0 4px 15px rgba(0,0,0,0.4);pointer-events:none;";
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.style.opacity = "1";
+  toast.style.transform = "translateX(-50%) translateY(0)";
+  
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateX(-50%) translateY(10px)";
+  }, 2000);
+}
+
 // 15. HELPERS DE FORMATEO
 function formatCurrency(amount, currency) {
   const formatted = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(amount);
@@ -1040,7 +1093,13 @@ function initEventListeners() {
   
   // Login
   document.getElementById("login-form").addEventListener("submit", handleAdminLogin);
-  document.getElementById("login-action-btn").addEventListener("click", handleLoginAction);
+  const loginActionBtn = document.getElementById("login-action-btn");
+  if (loginActionBtn) loginActionBtn.addEventListener("click", handleLoginAction);
+
+  // Activadores de 4 toques para ingresar como Admin
+  document.querySelectorAll(".admin-secret-target").forEach(el => {
+    el.addEventListener("click", handleAdmin4Tap);
+  });
   
   // Botones de Modales
   document.getElementById("btn-add-tx").addEventListener("click", () => {

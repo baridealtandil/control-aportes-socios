@@ -4,8 +4,8 @@
   "description": "Sistema bimonetario de control de aportes y presupuestos de socios",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0d1117",
-  "theme_color": "#6366f1",
+  "background_color": "#0b0f19",
+  "theme_color": "#0b0f19",
   "orientation": "portrait-primary",
   "lang": "es",
   "icons": [
