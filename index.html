@@ -77,7 +77,8 @@
 
     <!-- PESTAÑAS DE NAVEGACIÓN (ARRIBA DEL TODO) -->
     <div class="tabs-container">
-      <button class="tab-btn active" data-tab="tab-caja">📦 Caja</button>
+      <button class="tab-btn active" data-tab="tab-inicio">🏠 Inicio</button>
+      <button class="tab-btn" data-tab="tab-caja">📦 Caja</button>
       <button class="tab-btn" data-tab="tab-socios">👥 Socios</button>
       <button class="tab-btn" data-tab="tab-igualar">⚖️ Para Igualar</button>
       <button class="tab-btn" data-tab="tab-aportes">📜 Aportes</button>
@@ -90,43 +91,45 @@
       <input type="text" id="global-search" class="search-input" placeholder="Buscar proveedor, socio, concepto, producto o rubro en todas las pestañas...">
     </div>
 
-    <!-- TARJETA DE RESUMEN GLOBAL -->
-    <section class="global-summary-card">
-      <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-        <h2 style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin:0;">Resumen General del Proyecto</h2>
-      </div>
-      <div class="global-summary-grid">
-        <div class="global-stats">
-          <div class="stat-group">
-            <span class="stat-label">Total Recaudado (USD equiv.) <span id="dash-progress-text" class="partner-percentage" style="margin-left: 8px; font-size: 0.8rem; padding: 2px 8px;">0%</span></span>
-            <span class="stat-value-large" id="dash-total-usd">USD 0</span>
+    <!-- ================= TAB 1: INICIO (RESUMEN GENERAL DEL PROYECTO) ================= -->
+    <div id="tab-inicio" class="tab-content active">
+      <section class="global-summary-card">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          <h2 style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin:0;">Resumen General del Proyecto</h2>
+        </div>
+        <div class="global-summary-grid">
+          <div class="global-stats">
+            <div class="stat-group">
+              <span class="stat-label">Total Recaudado (USD equiv.) <span id="dash-progress-text" class="partner-percentage" style="margin-left: 8px; font-size: 0.8rem; padding: 2px 8px;">0%</span></span>
+              <span class="stat-value-large" id="dash-total-usd">USD 0</span>
+            </div>
+            <div class="progress-container">
+              <div class="progress-bar-fill" id="dash-progress-fill"></div>
+            </div>
+            <div class="stat-group">
+              <span class="stat-label">Meta Global del Proyecto <button class="btn-edit-target admin-only hidden" id="btn-edit-target-budget" style="background:none; border:none; color:var(--primary-light); cursor:pointer; padding:2px; font-size:0.8rem; margin-left: 5px;" title="Editar Meta Global">✏️</button></span>
+              <span class="stat-value-large" id="dash-target-usd">USD 200.000</span>
+            </div>
           </div>
-          <div class="progress-container">
-            <div class="progress-bar-fill" id="dash-progress-fill"></div>
-          </div>
-          <div class="stat-group">
-            <span class="stat-label">Meta Global del Proyecto <button class="btn-edit-target admin-only hidden" id="btn-edit-target-budget" style="background:none; border:none; color:var(--primary-light); cursor:pointer; padding:2px; font-size:0.8rem; margin-left: 5px;" title="Editar Meta Global">✏️</button></span>
-            <span class="stat-value-large" id="dash-target-usd">USD 200.000</span>
+          <div class="sub-stats-row">
+            <div class="sub-stat-card">
+              <div class="sub-stat-title">Aporte Dólares Directo</div>
+              <div class="sub-stat-val text-success" id="dash-usd-direct">USD 0</div>
+              <div class="sub-stat-equiv" id="dash-usd-direct-ars" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; font-weight: normal;">Equiv. $ 0 ARS</div>
+            </div>
+            <div class="sub-stat-card">
+              <div class="sub-stat-title">Aporte Pesos (ARS)</div>
+              <div class="sub-stat-val text-primary" id="dash-ars-equiv">$0</div>
+              <div class="sub-stat-equiv" id="dash-ars-equiv-usd" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; font-weight: normal;">Equiv. USD 0</div>
+            </div>
           </div>
         </div>
-        <div class="sub-stats-row">
-          <div class="sub-stat-card">
-            <div class="sub-stat-title">Aporte Dólares Directo</div>
-            <div class="sub-stat-val text-success" id="dash-usd-direct">USD 0</div>
-            <div class="sub-stat-equiv" id="dash-usd-direct-ars" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; font-weight: normal;">Equiv. $ 0 ARS</div>
-          </div>
-          <div class="sub-stat-card">
-            <div class="sub-stat-title">Aporte Pesos (ARS)</div>
-            <div class="sub-stat-val text-primary" id="dash-ars-equiv">$0</div>
-            <div class="sub-stat-equiv" id="dash-ars-equiv-usd" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; font-weight: normal;">Equiv. USD 0</div>
-          </div>
-        </div>
-      </div>
-    </section>
+      </section>
+    </div>
 
-    <!-- ================= TAB 1: CAJA ================= -->
-    <div id="tab-caja" class="tab-content active">
+    <!-- ================= TAB 2: CAJA ================= -->
+    <div id="tab-caja" class="tab-content hidden">
       <section id="caja-section" style="
         margin: 0;
         background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(13,17,23,0.5) 100%);

@@ -306,12 +306,56 @@ function showPartnerHistory(partnerName) {
 
   modalName.textContent = `Aportes de ${partnerName}`;
 
+  // Calcular equivalencias exactas por cada transacción
+  let directUsd = 0;
+  let directUsdArsEquiv = 0;
+  let totalArs = 0;
+  let totalArsUsdEquiv = 0;
+
+  txs.forEach(tx => {
+    const amt = parseFloat(tx.amount);
+    const rate = parseFloat(tx.rate || 1);
+    const rateUsed = rate > 1 ? rate : (state.dolarBlue.promedio || 1545);
+    
+    if (tx.currency === 'USD') {
+      directUsd += amt;
+      directUsdArsEquiv += (amt * rateUsed);
+    } else {
+      totalArs += amt;
+      totalArsUsdEquiv += (amt / rateUsed);
+    }
+  });
+
+  const totalUsdCombined = directUsd + totalArsUsdEquiv;
+
   modalSummary.innerHTML = `
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-      <div><strong>Total Aportado:</strong> <span class="text-success" style="font-weight:700">USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(stats.totalUsdValue)}</span></div>
-      <div><strong>Aportes Registrados:</strong> ${txs.length}</div>
-      <div><strong>Dólares Directos:</strong> USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(stats.usdDirect)}</div>
-      <div><strong>Pesos (ARS):</strong> $ ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(stats.arsTotal)}</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+      <!-- BLOQUE USD -->
+      <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:12px; padding:12px;">
+        <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:4px;">Aporte Dólares (USD)</div>
+        <div style="font-size:1.3rem; font-weight:700; color:#10b981; font-family:'Outfit',sans-serif;">
+          USD ${formatNumber(directUsd)}
+        </div>
+        <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+          ${directUsd > 0 ? `≈ $ ${formatNumber(directUsdArsEquiv)} ARS` : 'Sin aportes en USD'}
+        </div>
+      </div>
+
+      <!-- BLOQUE ARS -->
+      <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2); border-radius:12px; padding:12px;">
+        <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:4px;">Aporte Pesos (ARS)</div>
+        <div style="font-size:1.3rem; font-weight:700; color:var(--primary-light); font-family:'Outfit',sans-serif;">
+          $ ${formatNumber(totalArs)} ARS
+        </div>
+        <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+          ${totalArs > 0 ? `≈ USD ${formatNumber(totalArsUsdEquiv)}` : 'Sin aportes en ARS'}
+        </div>
+      </div>
+    </div>
+
+    <div style="background:rgba(255,255,255,0.03); border-radius:8px; padding:8px 12px; font-size:0.76rem; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+      <span>ℹ️ Los montos en otra moneda son solo equivalencias al tipo de cambio (no se suman).</span>
+      <span style="color:var(--text-main); font-weight:600;">Total: USD ${formatNumber(totalUsdCombined)}</span>
     </div>
   `;
 
