@@ -1544,37 +1544,40 @@ function shareWhatsAppSummary() {
     if (pUSD > maxUSD) { maxUSD = pUSD; maxPartner = p; }
   });
 
-  let partnerLines = PARTNERS.map(p => {
+  const partnerLines = PARTNERS.map(p => {
     const pStats = stats[p] || { totalUsdValue: 0 };
     const pUsd = pStats.totalUsdValue || 0;
     const isLeader = p === maxPartner && maxUSD > 0;
     const icon = isLeader ? '👑' : (pUsd > 0 ? '🔹' : '⚪');
     const pPct = ((pUsd / TARGET_PER_PARTNER) * 100).toFixed(1);
-    return `${icon} *${p}:* USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(pUsd)} (${pPct}% de meta)`;
+    return `${icon} *${p}:* USD ${formatNumber(Math.round(pUsd))} _(${pPct}%)_`;
   }).join('\n');
 
-  let text = `📊 *PACA BAR — Resumen General del Proyecto*\n`;
-  text += `🗓️ _Fecha: ${dateFormatted}_\n\n`;
-  text += `💰 *TOTAL RECAUDADO:* USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(totalUSD)} (${progressPercent}% de meta)\n`;
-  text += `🎯 *META GLOBAL:* USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(targetBudget)}\n\n`;
-  text += `💵 *Aporte Dólares:* USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(totalUSDDirect)}\n`;
-  text += `🇦🇷 *Aporte Pesos:* $ ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(totalARS)} ARS\n`;
-  text += `📈 *Cotización Dólar Blue:* $ ${rateToday} ARS\n\n`;
-  text += `👥 *AVANCE POR SOCIO:*\n${partnerLines}\n\n`;
-  text += `🔗 _Control de Aportes — Paca Bar_\nhttps://control-aportes-socios.vercel.app/`;
+  let text = `🍺 *PACA BAR — ESTADO DE APORTES*\n`;
+  text += `📅 _Fecha: ${dateFormatted}_\n`;
+  text += `────────────────────────\n\n`;
+  text += `📊 *RESUMEN GLOBAL*\n`;
+  text += `• Recaudado: *USD ${formatNumber(Math.round(totalUSD))}* (${progressPercent}%)\n`;
+  text += `• Meta Global: *USD ${formatNumber(targetBudget)}*\n`;
+  text += `• Dólar Blue: *$${formatNumber(rateToday)} ARS*\n\n`;
+  text += `💵 *FONDOS APORTADOS*\n`;
+  text += `• Dólares Directos: *USD ${formatNumber(totalUSDDirect)}*\n`;
+  text += `• Pesos ARS: *$${formatNumber(totalARS)} ARS*\n\n`;
+  text += `👥 *AVANCE SOCIOS* _(Meta 50k USD c/u)_\n`;
+  text += `${partnerLines}\n\n`;
+  text += `────────────────────────\n`;
+  text += `📲 _Tablero Online:_\nhttps://control-aportes-socios.vercel.app/`;
 
   const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   window.open(url, '_blank');
 }
 
-// 19. RENDERIZAR GRÁFICOS E INDICADORES (CHART.JS)
+// 19. RENDERIZAR GRÁFICOS E INDICADORES (CHART.JS & GANTT)
+let partnerGoalChart = null;
 let partnerChart = null;
 let currencyChart = null;
-let budgetChart = null;
 
 function renderCharts() {
-  if (typeof Chart === 'undefined') return;
-
   const stats = state.partnerStats || {};
   const rateToday = state.dolarBlue.promedio || 1545;
   const targetBudget = state.targetBudget || 200000;
@@ -1601,20 +1604,76 @@ function renderCharts() {
     }
   });
 
-  const activePartnersCount = PARTNERS.length || 4;
-  const avgPerPartner = totalUSD / activePartnersCount;
   const avgRate = rateCount > 0 ? Math.round(totalRateSum / rateCount) : rateToday;
   const progressPercent = Math.min((totalUSD / targetBudget) * 100, 100).toFixed(1);
 
-  const kpiAvg = document.getElementById("kpi-avg-partner");
+  const kpiTotal = document.getElementById("kpi-total-recaudado");
   const kpiRate = document.getElementById("kpi-avg-rate");
   const kpiProg = document.getElementById("kpi-global-progress");
 
-  if (kpiAvg) kpiAvg.textContent = `USD ${formatNumber(avgPerPartner)}`;
+  if (kpiTotal) kpiTotal.textContent = `USD ${formatNumber(Math.round(totalUSD))}`;
   if (kpiRate) kpiRate.textContent = `$ ${formatNumber(avgRate)} ARS`;
   if (kpiProg) kpiProg.textContent = `${progressPercent}%`;
 
-  // Chart 1: Partner Ring Chart (Anillo por Socio)
+  if (typeof Chart === 'undefined') return;
+
+  // Chart 1: Horizontal Bar Chart of Partner Progress vs 50k Goal
+  const ctxGoal = document.getElementById("chart-partners-goal-bars");
+  if (ctxGoal) {
+    if (partnerGoalChart) partnerGoalChart.destroy();
+
+    const partnerDataUsd = PARTNERS.map(p => stats[p] ? parseFloat(stats[p].totalUsdValue.toFixed(2)) : 0);
+    const goalDataUsd = PARTNERS.map(() => TARGET_PER_PARTNER);
+
+    partnerGoalChart = new Chart(ctxGoal, {
+      type: 'bar',
+      data: {
+        labels: PARTNERS,
+        datasets: [
+          {
+            label: 'Aportado (USD)',
+            data: partnerDataUsd,
+            backgroundColor: '#818cf8',
+            borderRadius: 6
+          },
+          {
+            label: 'Meta por Socio (USD 50.000)',
+            data: goalDataUsd,
+            backgroundColor: 'rgba(255, 255, 255, 0.06)',
+            borderColor: 'rgba(255, 255, 255, 0.15)',
+            borderWidth: 1,
+            borderRadius: 6
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            max: TARGET_PER_PARTNER,
+            ticks: { color: '#94a3b8', font: { family: 'Outfit' }, callback: (v) => `$${formatNumber(v)}` },
+            grid: { color: 'rgba(255,255,255,0.05)' }
+          },
+          y: {
+            ticks: { color: '#94a3b8', font: { family: 'Outfit', weight: '600' } },
+            grid: { display: false }
+          }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { color: '#94a3b8', font: { family: 'Outfit' } } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: USD ${formatNumber(ctx.raw)} (${((ctx.raw / TARGET_PER_PARTNER)*100).toFixed(1)}%)`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Chart 2: Partner Ring Chart (Anillo por Socio)
   const ctxPartner = document.getElementById("chart-partners-ring");
   if (ctxPartner) {
     if (partnerChart) partnerChart.destroy();
@@ -1648,7 +1707,7 @@ function renderCharts() {
     });
   }
 
-  // Chart 2: Currency Doughnut (Anillo de Monedas)
+  // Chart 3: Currency Doughnut (Anillo de Monedas)
   const ctxCurrency = document.getElementById("chart-currency-doughnut");
   if (ctxCurrency) {
     if (currencyChart) currencyChart.destroy();
@@ -1682,57 +1741,110 @@ function renderCharts() {
     });
   }
 
-  // Chart 3: Budget Execution Bars (Barras por Rubro)
-  const ctxBudget = document.getElementById("chart-budget-bars");
-  if (ctxBudget) {
-    if (budgetChart) budgetChart.destroy();
+  // GANTT / TIMELINE DE AVANCE DE OBRA POR FASES
+  renderGanttPhases(rateToday);
+}
 
-    const phases = {};
-    state.categories.forEach(c => { phases[c.name.split(':')[0]] = { budgetUsd: 0, spentUsd: 0 }; });
+// 20. RENDERIZAR TIMELINE GANTT DE FASES DE OBRA
+function renderGanttPhases(rateToday) {
+  const container = document.getElementById("gantt-phases-list");
+  const overallBadge = document.getElementById("gantt-overall-badge");
+  if (!container) return;
 
-    state.budgets.forEach(b => {
-      const pName = b.phase.split(':')[0];
-      if (!phases[pName]) phases[pName] = { budgetUsd: 0, spentUsd: 0 };
-      const bAmtUsd = b.currency === "USD" ? parseFloat(b.amount) : parseFloat(b.amount) / rateToday;
-      phases[pName].budgetUsd += bAmtUsd;
-    });
+  container.innerHTML = "";
 
-    state.transactions.forEach(t => {
-      if (t.budget_id) {
-        const b = state.budgets.find(bg => bg.id === t.budget_id);
-        if (b) {
-          const pName = b.phase.split(':')[0];
-          if (!phases[pName]) phases[pName] = { budgetUsd: 0, spentUsd: 0 };
-          const tAmtUsd = t.currency === "USD" ? parseFloat(t.amount) : parseFloat(t.amount) / (t.rate || rateToday);
-          phases[pName].spentUsd += tAmtUsd;
+  // Agrupar presupuestos y transacciones por fase (Categoría)
+  const phasesMap = {};
+  
+  state.categories.forEach(c => {
+    phasesMap[c.name] = { name: c.name, budgetUsd: 0, spentUsd: 0, itemsCount: 0 };
+  });
+
+  state.budgets.forEach(b => {
+    const phaseKey = b.phase || "General";
+    if (!phasesMap[phaseKey]) {
+      phasesMap[phaseKey] = { name: phaseKey, budgetUsd: 0, spentUsd: 0, itemsCount: 0 };
+    }
+    const amtUsd = b.currency === "USD" ? parseFloat(b.amount) : parseFloat(b.amount) / rateToday;
+    phasesMap[phaseKey].budgetUsd += amtUsd;
+    phasesMap[phaseKey].itemsCount++;
+  });
+
+  state.transactions.forEach(t => {
+    if (t.budget_id) {
+      const b = state.budgets.find(bg => bg.id === t.budget_id);
+      if (b && b.phase) {
+        const phaseKey = b.phase;
+        if (!phasesMap[phaseKey]) {
+          phasesMap[phaseKey] = { name: phaseKey, budgetUsd: 0, spentUsd: 0, itemsCount: 0 };
         }
+        const tAmtUsd = t.currency === "USD" ? parseFloat(t.amount) : parseFloat(t.amount) / (t.rate || rateToday);
+        phasesMap[phaseKey].spentUsd += tAmtUsd;
       }
-    });
+    }
+  });
 
-    const labels = Object.keys(phases);
-    const budgetData = labels.map(l => parseFloat(phases[l].budgetUsd.toFixed(2)));
-    const spentData = labels.map(l => parseFloat(phases[l].spentUsd.toFixed(2)));
+  const phasesList = Object.values(phasesMap).filter(p => p.budgetUsd > 0 || p.spentUsd > 0);
 
-    budgetChart = new Chart(ctxBudget, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [
-          { label: 'Presupuestado (USD)', data: budgetData, backgroundColor: 'rgba(99, 102, 241, 0.7)', borderRadius: 6 },
-          { label: 'Financiado (USD)', data: spentData, backgroundColor: 'rgba(16, 185, 129, 0.85)', borderRadius: 6 }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { ticks: { color: '#94a3b8', font: { family: 'Outfit' } }, grid: { display: false } },
-          y: { ticks: { color: '#94a3b8', font: { family: 'Outfit' } }, grid: { color: 'rgba(255,255,255,0.05)' } }
-        },
-        plugins: {
-          legend: { position: 'top', labels: { color: '#94a3b8', font: { family: 'Outfit' } } }
-        }
-      }
-    });
+  let grandBudget = 0;
+  let grandSpent = 0;
+
+  phasesList.forEach(p => {
+    grandBudget += p.budgetUsd;
+    grandSpent += p.spentUsd;
+  });
+
+  const overallPct = grandBudget > 0 ? Math.min((grandSpent / grandBudget) * 100, 100).toFixed(1) : 0;
+  if (overallBadge) overallBadge.textContent = `🎯 ${overallPct}% Ejecutado Total`;
+
+  if (phasesList.length === 0) {
+    container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Sin fases o presupuestos registrados aún.</div>`;
+    return;
   }
+
+  phasesList.forEach((phase, index) => {
+    const pct = phase.budgetUsd > 0 ? Math.min((phase.spentUsd / phase.budgetUsd) * 100, 100).toFixed(1) : 0;
+    
+    let statusText = "Pendiente";
+    let statusBg = "rgba(255,255,255,0.06)";
+    let statusColor = "var(--text-muted)";
+    let barColor = "var(--primary-light)";
+
+    if (pct >= 100) {
+      statusText = "✅ Completado";
+      statusBg = "rgba(16,185,129,0.15)";
+      statusColor = "#34d399";
+      barColor = "var(--success)";
+    } else if (pct > 0) {
+      statusText = "⚡ En Ejecución";
+      statusBg = "rgba(99,102,241,0.15)";
+      statusColor = "var(--primary-light)";
+      barColor = "linear-gradient(90deg, #6366f1 0%, #34d399 100%)";
+    }
+
+    const card = document.createElement("div");
+    card.style.cssText = "background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:12px; padding:16px;";
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+        <div style="font-weight:600; font-size:0.95rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+          <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; background:rgba(99,102,241,0.2); color:var(--primary-light); border-radius:50%; font-size:0.75rem;">${index + 1}</span>
+          ${phase.name}
+        </div>
+        <span style="font-size:0.75rem; padding:3px 10px; border-radius:20px; background:${statusBg}; color:${statusColor}; font-weight:600;">
+          ${statusText} (${pct}%)
+        </span>
+      </div>
+
+      <!-- Barra de Gantt -->
+      <div style="height:10px; background:rgba(255,255,255,0.06); border-radius:6px; overflow:hidden; margin:10px 0;">
+        <div style="width:${pct}%; height:100%; background:${barColor}; transition:width 0.5s ease; border-radius:6px;"></div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-muted); margin-top:6px;">
+        <span>Financiado: <strong style="color:var(--text-main)">USD ${formatNumber(Math.round(phase.spentUsd))}</strong></span>
+        <span>Presupuestado: <strong style="color:var(--text-main)">USD ${formatNumber(Math.round(phase.budgetUsd))}</strong></span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
 }

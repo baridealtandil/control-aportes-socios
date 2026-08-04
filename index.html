@@ -369,53 +369,79 @@
 
     <!-- ================= TAB 7: GRÁFICOS E INDICADORES ================= -->
     <div id="tab-graficos" class="tab-content hidden">
-      <!-- TARJETAS KPI -->
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:15px; margin-bottom:25px;">
+      <!-- TARJETAS KPI (SIN PROMEDIO DE SOCIO) -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:25px;">
         <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; text-align:center;">
-          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Aporte Promedio por Socio</div>
-          <div id="kpi-avg-partner" style="font-size:1.5rem; font-weight:700; color:var(--primary-light);">USD 0</div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Total Recaudado (USD)</div>
+          <div id="kpi-total-recaudado" style="font-size:1.5rem; font-weight:700; color:#10b981;">USD 0</div>
         </div>
         <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; text-align:center;">
-          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Tipo de Cambio Aplicado (Prom.)</div>
-          <div id="kpi-avg-rate" style="font-size:1.5rem; font-weight:700; color:var(--success-light);">$ 0 ARS</div>
-        </div>
-        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; text-align:center;">
-          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">% Avance de Meta Global</div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">% Avance Meta Global</div>
           <div id="kpi-global-progress" style="font-size:1.5rem; font-weight:700; color:var(--warning);">0%</div>
+        </div>
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; text-align:center;">
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Cotización Dólar Blue (Prom.)</div>
+          <div id="kpi-avg-rate" style="font-size:1.5rem; font-weight:700; color:var(--primary-light);">$ 0 ARS</div>
         </div>
       </div>
 
-      <!-- GRID DE GRÁFICOS -->
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
-        <!-- GRÁFICO 1: Anillo de Aportes por Socio -->
+      <!-- GRID PRINCIPAL DE GRÁFICOS -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+        
+        <!-- BARRAS DE AVANCE DE SOCIOS SEGÚN META (USD 50.000) -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px; grid-column: 1 / -1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+            <h3 style="font-size:1.05rem; font-weight:600; color:var(--text-main); margin:0; display:flex; align-items:center; gap:8px;">
+              📊 Avance de Aportes por Socio según Meta (USD 50.000 c/u)
+            </h3>
+            <span style="font-size:0.78rem; color:var(--text-muted); background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); padding:3px 10px; border-radius:20px;">
+              Meta Individual: USD 50.000
+            </span>
+          </div>
+          <div style="position:relative; height:240px;">
+            <canvas id="chart-partners-goal-bars"></canvas>
+          </div>
+        </div>
+
+        <!-- GRÁFICO ANILLO: Participación de Socios -->
         <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px;">
           <h3 style="font-size:1rem; font-weight:600; margin-bottom:15px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-            🍩 Participación por Socio (USD equiv.)
+            🍩 Distribución entre Socios (%)
           </h3>
-          <div style="position:relative; height:260px;">
+          <div style="position:relative; height:240px;">
             <canvas id="chart-partners-ring"></canvas>
           </div>
         </div>
 
-        <!-- GRÁFICO 2: Anillo de Monedas (USD vs ARS) -->
+        <!-- GRÁFICO ANILLO: Monedas USD vs ARS -->
         <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px;">
           <h3 style="font-size:1rem; font-weight:600; margin-bottom:15px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
             🔀 Distribución por Moneda (USD vs ARS)
           </h3>
-          <div style="position:relative; height:260px;">
+          <div style="position:relative; height:240px;">
             <canvas id="chart-currency-doughnut"></canvas>
           </div>
         </div>
 
-        <!-- GRÁFICO 3: Barras de Ejecución de Presupuesto por Rubro -->
-        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:20px; grid-column: 1 / -1;">
-          <h3 style="font-size:1rem; font-weight:600; margin-bottom:15px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-            📊 Ejecución por Rubro (Presupuestado vs Financiado)
-          </h3>
-          <div style="position:relative; height:280px;">
-            <canvas id="chart-budget-bars"></canvas>
+        <!-- AVANCE DEL TOTAL DE LA OBRA POR FASES (ESTILO GANTT / TIMELINE) -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:22px; grid-column: 1 / -1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h3 style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin:0; display:flex; align-items:center; gap:8px;">
+                📑 Avance de la Obra y Ejecución por Fases (Cronograma / Gantt)
+              </h3>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Progreso acumulado de financiamiento y ejecución según presupuesto</div>
+            </div>
+            <div id="gantt-overall-badge" style="font-size:0.85rem; font-weight:600; color:var(--success); background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); padding:4px 12px; border-radius:20px;">
+              0% Ejecutado
+            </div>
+          </div>
+
+          <div id="gantt-phases-list" style="display:flex; flex-direction:column; gap:16px;">
+            <!-- Generado dinámicamente -->
           </div>
         </div>
+
       </div>
     </div>
 
