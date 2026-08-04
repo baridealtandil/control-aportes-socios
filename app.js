@@ -39,11 +39,11 @@ async function loadDolarBlue() {
       fecha: new Date(data.fechaActualizacion).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     
-    widgetValue.innerHTML = `Promedio: <strong>$${promedio}</strong> <span style="font-size:0.75rem;color:var(--text-muted)">(${state.dolarBlue.fecha} hs)</span>`;
+    widgetValue.innerHTML = `<strong>$${formatNumber(promedio)}</strong> <span style="font-size:0.75rem;color:var(--text-muted);margin-left:4px;">(Promedio entre compra $${formatNumber(data.compra)} y venta $${formatNumber(data.venta)})</span>`;
   } catch (e) {
     console.error("Fallo al cargar cotización de Dólar Blue:", e);
     widgetValue.innerHTML = `<span class="text-danger">Error de red</span>`;
-    state.dolarBlue = { compra: 1350, venta: 1350, promedio: 1350 }; // Respaldo
+    state.dolarBlue = { compra: 1545, venta: 1545, promedio: 1545 }; // Respaldo
   }
 }
 
@@ -54,8 +54,6 @@ async function loadState() {
   loader.style.cssText = "position:fixed;top:20px;right:20px;background:var(--primary);padding:8px 16px;border-radius:20px;font-size:0.8rem;z-index:9999;";
   loader.textContent = "Sincronizando con base de datos...";
   document.body.appendChild(loader);
-
-  const labelStatus = document.getElementById("widget-cloud-status");
 
   try {
     // Obtener transacciones, presupuestos, categorías y meta global en paralelo
@@ -70,11 +68,8 @@ async function loadState() {
     state.budgets = budgets;
     state.categories = categories;
     state.targetBudget = targetBudget;
-    
-    labelStatus.innerHTML = `Base de datos: <span class="text-success">Online (PG)</span>`;
   } catch (e) {
     console.error("Error al cargar estado del backend:", e);
-    labelStatus.innerHTML = `Base de datos: <span class="text-danger">Offline</span>`;
     alert("No se pudo conectar con el servidor de bases de datos.");
   } finally {
     const el = document.getElementById("global-loading");
@@ -260,6 +255,10 @@ function renderPartners() {
 
     const card = document.createElement("div");
     card.className = `partner-card ${isCompleted ? "completed" : ""}`;
+    card.style.cursor = "pointer";
+    card.title = "Haz clic para ver el detalle de aportes con fechas";
+    card.onclick = () => showPartnerHistory(partnerName);
+
     card.innerHTML = `
       <div class="partner-card-header">
         <span class="partner-name">${partnerName}</span>
@@ -284,10 +283,77 @@ function renderPartners() {
           ${usdLine}
           ${arsLine}
         </div>
+        <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05); text-align:right; font-size:0.78rem; color:var(--primary-light); font-weight:500;">
+          📅 Ver detalle de aportes y fechas ➔
+        </div>
       </div>
     `;
     container.appendChild(card);
   });
+}
+
+// Modal de detalle e historial de aportes con fechas de un socio
+function showPartnerHistory(partnerName) {
+  const modalName = document.getElementById("modal-partner-name");
+  const modalSummary = document.getElementById("modal-partner-summary");
+  const modalList = document.getElementById("modal-partner-tx-list");
+
+  if (!modalName || !modalList) return;
+
+  const stats = state.partnerStats[partnerName] || { usdDirect: 0, arsTotal: 0, totalUsdValue: 0, arsEquivOfUsd: 0 };
+  const txs = state.transactions.filter(t => t.partner === partnerName)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  modalName.textContent = `Aportes de ${partnerName}`;
+
+  modalSummary.innerHTML = `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+      <div><strong>Total Aportado:</strong> <span class="text-success" style="font-weight:700">USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(stats.totalUsdValue)}</span></div>
+      <div><strong>Aportes Registrados:</strong> ${txs.length}</div>
+      <div><strong>Dólares Directos:</strong> USD ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(stats.usdDirect)}</div>
+      <div><strong>Pesos (ARS):</strong> $ ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(stats.arsTotal)}</div>
+    </div>
+  `;
+
+  modalList.innerHTML = "";
+
+  if (txs.length === 0) {
+    modalList.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Sin aportes registrados para este socio.</div>`;
+  } else {
+    txs.forEach(tx => {
+      const amt = parseFloat(tx.amount);
+      const rate = parseFloat(tx.rate || 1);
+      const rateUsed = rate > 1 ? rate : (state.dolarBlue.promedio || 1545);
+      const dateFormatted = formatDate(tx.date);
+      
+      const associatedBudget = state.budgets.find(b => b.id === tx.budget_id);
+      const budgetText = associatedBudget ? `📌 Presupuesto: ${associatedBudget.concept}` : 'Aporte de Capital General';
+      
+      const equivText = tx.currency === 'USD'
+        ? `≈ $ ${formatNumber(amt * rateUsed)} ARS`
+        : `≈ USD ${formatNumber(amt / rateUsed)}`;
+
+      const card = document.createElement("div");
+      card.style.cssText = "background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:10px; padding:12px; font-size:0.85rem;";
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="color:var(--text-muted); font-size:0.8rem; font-weight:500;">📅 ${dateFormatted}</span>
+          <strong style="font-size:0.95rem; color:${tx.currency === 'USD' ? '#34d399' : 'var(--primary-light)'}">
+            ${formatCurrency(amt, tx.currency)}
+          </strong>
+        </div>
+        <div style="font-weight:600; color:var(--text-main); margin-bottom:2px;">${tx.concept}</div>
+        <div style="font-size:0.78rem; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px; margin-top:4px;">
+          <span>${tx.provider ? `Proveedor: <strong>${tx.provider}</strong>` : ''}</span>
+          <span>${equivText} <span style="font-size:0.7rem;">(Dólar: $${formatNumber(rateUsed)})</span></span>
+        </div>
+        <div style="font-size:0.75rem; color:var(--success-light); margin-top:4px;">${budgetText}</div>
+      `;
+      modalList.appendChild(card);
+    });
+  }
+
+  openModal("modal-partner-history");
 }
 
 // Helper para buscador global
@@ -696,16 +762,20 @@ function renderAdminUI() {
   const secretBtn = document.getElementById("btn-secret-admin");
   
   if (isAdmin) {
-    adminBadge.classList.add("active");
-    adminBadge.innerHTML = `<span style="display:inline-block;width:8px;height:8px;background:var(--success);border-radius:50%"></span> Administrador`;
+    if (adminBadge) {
+      adminBadge.classList.add("active");
+      adminBadge.innerHTML = `<span style="display:inline-block;width:8px;height:8px;background:var(--success);border-radius:50%"></span> Administrador`;
+    }
     if (loginActionBtn) {
       loginActionBtn.classList.remove("hidden");
       loginActionBtn.innerHTML = `Salir Admin`;
     }
     if (secretBtn) secretBtn.classList.add("hidden");
   } else {
-    adminBadge.classList.remove("active");
-    adminBadge.textContent = "Modo Socio (Solo Lectura)";
+    if (adminBadge) {
+      adminBadge.classList.remove("active");
+      adminBadge.textContent = "";
+    }
     if (loginActionBtn) loginActionBtn.classList.add("hidden");
     if (secretBtn) secretBtn.classList.remove("hidden");
   }

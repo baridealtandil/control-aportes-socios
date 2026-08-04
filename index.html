@@ -69,17 +69,20 @@
       </div>
       <div class="header-meta-widgets">
         <div class="widget-pill" id="widget-dolar">
-          <span class="label">Dólar Blue:</span>
+          <span class="label">Cotización en vivo (Dólar Blue):</span>
           <span class="value" id="widget-dolar-value">Cargando...</span>
-        </div>
-        <div class="widget-pill" id="widget-cloud-status">
-          Base de datos: <span class="text-warning">Cargando...</span>
-        </div>
-        <div class="widget-pill admin-badge admin-secret-target" id="admin-status-badge" style="cursor: pointer;">
-          Modo Socio (Solo Lectura)
         </div>
       </div>
     </header>
+
+    <!-- PESTAÑAS DE NAVEGACIÓN (ARRIBA DEL TODO) -->
+    <div class="tabs-container">
+      <button class="tab-btn active" data-tab="tab-caja">📦 Caja</button>
+      <button class="tab-btn" data-tab="tab-socios">👥 Socios</button>
+      <button class="tab-btn" data-tab="tab-igualar">⚖️ Para Igualar</button>
+      <button class="tab-btn" data-tab="tab-aportes">📜 Aportes</button>
+      <button class="tab-btn" data-tab="tab-presupuestos">📊 Presupuestos</button>
+    </div>
 
     <!-- BUSCADOR GLOBAL -->
     <div class="search-wrapper">
@@ -121,15 +124,6 @@
         </div>
       </div>
     </section>
-
-    <!-- PESTAÑAS DE NAVEGACIÓN -->
-    <div class="tabs-container">
-      <button class="tab-btn active" data-tab="tab-caja">📦 Caja</button>
-      <button class="tab-btn" data-tab="tab-socios">👥 Socios</button>
-      <button class="tab-btn" data-tab="tab-igualar">⚖️ Para Igualar</button>
-      <button class="tab-btn" data-tab="tab-aportes">📜 Aportes</button>
-      <button class="tab-btn" data-tab="tab-presupuestos">📊 Presupuestos</button>
-    </div>
 
     <!-- ================= TAB 1: CAJA ================= -->
     <div id="tab-caja" class="tab-content active">
@@ -636,6 +630,27 @@
           <button class="btn" type="submit" id="cfg-pin-submit-btn">Guardar PIN</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: HISTORIAL DE APORTES POR SOCIO -->
+  <div class="modal-overlay" id="modal-partner-history">
+    <div class="modal-container" style="max-width: 550px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-partner-name">Aportes de Socio</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-partner-summary" style="margin-bottom:15px; padding:14px; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:12px; font-size:0.9rem;">
+          <!-- Resumen de montos del socio -->
+        </div>
+        <div id="modal-partner-tx-list" style="display:flex; flex-direction:column; gap:10px; max-height:360px; overflow-y:auto; padding-right:4px;">
+          <!-- Lista de transacciones con fechas -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close" type="button">Cerrar</button>
+      </div>
     </div>
   </div>
 
