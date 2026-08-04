@@ -89,14 +89,34 @@ async function loadState() {
   renderAll();
 }
 
-// Llena los selectores con las categorías dinámicas de la DB
-function populateCategoryDropdowns() {
+function renderCategories() {
   const selectTx = document.getElementById("tx-phase");
   const selectBg = document.getElementById("bg-phase");
   const filterTx = document.getElementById("filter-fase");
   const filterBg = document.getElementById("filter-budget-fase");
 
-  const cats = state.categories.map(c => c.name);
+  const PHASE_ORDER = [
+    "Fase 1: Obra Civil y Estructuras",
+    "Fase 2: Insonorización, Pisos y Climatización",
+    "Fase 3: Equipamiento de Frío y Cocina",
+    "Fase 4: Tecnología, Audio, Luces y POS",
+    "Fase 5: Mobiliario, Ambientación y Apertura"
+  ];
+
+  // Filtrar duplicados y ordenar por fase oficial
+  const uniqueCatsMap = {};
+  state.categories.forEach(c => {
+    if (c && c.name) uniqueCatsMap[c.name.trim()] = true;
+  });
+
+  let cats = Object.keys(uniqueCatsMap);
+  cats.sort((a, b) => {
+    const getIndex = (name) => {
+      const idx = PHASE_ORDER.findIndex(p => name.startsWith(p.split(':')[0]));
+      return idx === -1 ? 99 : idx;
+    };
+    return getIndex(a) - getIndex(b);
+  });
 
   // Mantener los valores actuales seleccionados
   const currentTxVal = selectTx.value;
@@ -104,13 +124,13 @@ function populateCategoryDropdowns() {
   const currentFilterTxVal = filterTx.value;
   const currentFilterBgVal = filterBg.value;
 
-  // Llenar selectores de creación
+  // Llenar selectores de creación con el nombre completo
   selectTx.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
   selectBg.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
 
-  // Llenar selectores de filtro (con opción vacía "Todos")
-  filterTx.innerHTML = '<option value="">Todos los Rubros</option>' + cats.map(c => `<option value="${c}">${c.split(':')[0]}</option>`).join('');
-  filterBg.innerHTML = '<option value="">Todos los Rubros</option>' + cats.map(c => `<option value="${c}">${c.split(':')[0]}</option>`).join('');
+  // Llenar selectores de filtro con el nombre completo de la fase
+  filterTx.innerHTML = '<option value="">Todos los Rubros</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  filterBg.innerHTML = '<option value="">Todos los Rubros</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
 
   // Restaurar selecciones anteriores si siguen existiendo
   if (cats.includes(currentTxVal)) selectTx.value = currentTxVal;
@@ -588,6 +608,14 @@ function renderBudgets() {
   tableBody.innerHTML = "";
   mobileList.innerHTML = "";
 
+  const PHASE_ORDER = [
+    "Fase 1: Obra Civil y Estructuras",
+    "Fase 2: Insonorización, Pisos y Climatización",
+    "Fase 3: Equipamiento de Frío y Cocina",
+    "Fase 4: Tecnología, Audio, Luces y POS",
+    "Fase 5: Mobiliario, Ambientación y Apertura"
+  ];
+
   const filtered = state.budgets.filter(b => {
     if (filterFase && b.phase !== filterFase) return false;
     
@@ -598,7 +626,18 @@ function renderBudgets() {
     }
 
     return true;
-  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+  }).sort((a, b) => {
+    const getPhaseIndex = (p) => {
+      if (!p) return 99;
+      const idx = PHASE_ORDER.findIndex(o => p.startsWith(o.split(':')[0]));
+      return idx === -1 ? 99 : idx;
+    };
+    const indexA = getPhaseIndex(a.phase);
+    const indexB = getPhaseIndex(b.phase);
+    
+    if (indexA !== indexB) return indexA - indexB;
+    return new Date(a.date) - new Date(b.date);
+  });
 
   if (filtered.length === 0) {
     const noRecordsHtml = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:30px;">No se encontraron ítems de presupuesto cargados.</td></tr>`;
