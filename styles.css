@@ -801,12 +801,28 @@ header {
   background: rgba(17, 24, 39, 0.95);
   backdrop-filter: blur(10px);
   border-top: 1px solid var(--border-color);
-  padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)) 20px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)) 14px;
   display: flex;
-  justify-content: space-around;
+  justify-content: flex-end;
   align-items: center;
+  gap: 8px;
   z-index: 100;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-sticky-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-sticky-bar .btn {
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  border-radius: 8px;
 }
 
 @media(min-width: 768px) {

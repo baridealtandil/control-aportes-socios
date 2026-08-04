@@ -602,12 +602,12 @@ function toggleTabButtons() {
   const isAdmin = window.AppStorage.isAdmin();
 
   if (isAdmin) {
-    if (state.activeTab === 'tab-aportes') {
-      btnAddTx.classList.remove("hidden");
-      btnAddBudget.classList.add("hidden");
+    if (state.activeTab === 'tab-presupuestos') {
+      if (btnAddTx) btnAddTx.classList.add("hidden");
+      if (btnAddBudget) btnAddBudget.classList.remove("hidden");
     } else {
-      btnAddTx.classList.add("hidden");
-      btnAddBudget.classList.remove("hidden");
+      if (btnAddTx) btnAddTx.classList.remove("hidden");
+      if (btnAddBudget) btnAddBudget.classList.add("hidden");
     }
   }
 }

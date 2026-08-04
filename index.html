@@ -118,68 +118,71 @@
       </div>
     </section>
 
-    <!-- ══════════════ CAJA (FONDOS SIN ASIGNAR) ══════════════ -->
-    <section id="caja-section" style="
-      margin: 0 0 0 0;
-      background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(13,17,23,0.5) 100%);
-      border: 1px solid rgba(16,185,129,0.18);
-      border-radius: 16px;
-      padding: 20px 24px;
-    ">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
-          </svg>
-          <h2 style="font-size:1.15rem; font-weight:700; margin:0; color:var(--text-main);">Caja — Fondos Disponibles</h2>
-          <span style="font-size:0.75rem; color:var(--text-muted); background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); padding:2px 8px; border-radius:20px;">Sin asignar a gasto</span>
-        </div>
-        <span id="caja-total-ars-equiv" style="font-size:0.85rem; color:var(--text-muted);"></span>
-      </div>
-
-      <!-- Totales por moneda -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-        <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:12px; padding:16px;">
-          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-            <span style="width:8px;height:8px;background:#10b981;border-radius:50%;display:inline-block;"></span>
-            Caja USD
-          </div>
-          <div id="caja-usd-total" style="font-size:1.6rem; font-weight:700; color:#10b981; font-family:'Outfit',sans-serif;">USD 0</div>
-          <div id="caja-usd-ars-equiv" style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;"></div>
-        </div>
-        <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2); border-radius:12px; padding:16px;">
-          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-            <span style="width:8px;height:8px;background:#6366f1;border-radius:50%;display:inline-block;"></span>
-            Caja ARS
-          </div>
-          <div id="caja-ars-total" style="font-size:1.6rem; font-weight:700; color:var(--primary-light); font-family:'Outfit',sans-serif;">$ 0</div>
-          <div id="caja-ars-usd-equiv" style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;"></div>
-        </div>
-      </div>
-
-      <!-- Detalle por socio -->
-      <div id="caja-detalle" style="display:none;">
-        <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Detalle por socio</div>
-        <div id="caja-detalle-body" style="display:flex; flex-wrap:wrap; gap:8px;">
-          <!-- generado dinámicamente -->
-        </div>
-      </div>
-
-      <div id="caja-empty" style="display:none; text-align:center; color:var(--text-muted); font-size:0.88rem; padding:8px 0;">
-        ✅ Todos los aportes están asignados a un gasto
-      </div>
-    </section>
-
     <!-- PESTAÑAS DE NAVEGACIÓN -->
     <div class="tabs-container">
-      <button class="tab-btn active" data-tab="tab-aportes">Aportes de Capital</button>
-      <button class="tab-btn" data-tab="tab-presupuestos">Control de Presupuestos</button>
+      <button class="tab-btn active" data-tab="tab-caja">📦 Caja</button>
+      <button class="tab-btn" data-tab="tab-socios">👥 Socios</button>
+      <button class="tab-btn" data-tab="tab-igualar">⚖️ Para Igualar</button>
+      <button class="tab-btn" data-tab="tab-aportes">📜 Aportes</button>
+      <button class="tab-btn" data-tab="tab-presupuestos">📊 Presupuestos</button>
     </div>
 
+    <!-- ================= TAB 1: CAJA ================= -->
+    <div id="tab-caja" class="tab-content active">
+      <section id="caja-section" style="
+        margin: 0;
+        background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(13,17,23,0.5) 100%);
+        border: 1px solid rgba(16,185,129,0.18);
+        border-radius: 16px;
+        padding: 20px 24px;
+      ">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+            </svg>
+            <h2 style="font-size:1.15rem; font-weight:700; margin:0; color:var(--text-main);">Caja — Fondos Disponibles</h2>
+            <span style="font-size:0.75rem; color:var(--text-muted); background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); padding:2px 8px; border-radius:20px;">Sin asignar a gasto</span>
+          </div>
+          <span id="caja-total-ars-equiv" style="font-size:0.85rem; color:var(--text-muted);"></span>
+        </div>
 
-    <!-- ================= CONTENIDO TAB 1: APORTES ================= -->
-    <div id="tab-aportes" class="tab-content active">
-      <!-- METAS POR SOCIO -->
+        <!-- Totales por moneda -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:12px; padding:16px;">
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+              <span style="width:8px;height:8px;background:#10b981;border-radius:50%;display:inline-block;"></span>
+              Caja USD
+            </div>
+            <div id="caja-usd-total" style="font-size:1.6rem; font-weight:700; color:#10b981; font-family:'Outfit',sans-serif;">USD 0</div>
+            <div id="caja-usd-ars-equiv" style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;"></div>
+          </div>
+          <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2); border-radius:12px; padding:16px;">
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+              <span style="width:8px;height:8px;background:#6366f1;border-radius:50%;display:inline-block;"></span>
+              Caja ARS
+            </div>
+            <div id="caja-ars-total" style="font-size:1.6rem; font-weight:700; color:var(--primary-light); font-family:'Outfit',sans-serif;">$ 0</div>
+            <div id="caja-ars-usd-equiv" style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;"></div>
+          </div>
+        </div>
+
+        <!-- Detalle por socio -->
+        <div id="caja-detalle" style="display:none;">
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Detalle por socio</div>
+          <div id="caja-detalle-body" style="display:flex; flex-wrap:wrap; gap:8px;">
+            <!-- generado dinámicamente -->
+          </div>
+        </div>
+
+        <div id="caja-empty" style="display:none; text-align:center; color:var(--text-muted); font-size:0.88rem; padding:8px 0;">
+          ✅ Todos los aportes están asignados a un gasto
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= TAB 2: SOCIOS ================= -->
+    <div id="tab-socios" class="tab-content hidden">
       <section class="partners-section">
         <h2 class="partners-section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -189,9 +192,11 @@
           <!-- Generado dinámicamente -->
         </div>
       </section>
+    </div>
 
-      <!-- TABLA DE NIVELACIÓN DE APORTES -->
-      <section class="history-section" style="margin-top: 25px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(22, 30, 49, 0.4) 100%);">
+    <!-- ================= TAB 3: PARA IGUALAR ================= -->
+    <div id="tab-igualar" class="tab-content hidden">
+      <section class="history-section" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(22, 30, 49, 0.4) 100%);">
         <div class="history-header">
           <div class="history-title-area">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
@@ -219,8 +224,10 @@
           <!-- Generado dinámicamente -->
         </div>
       </section>
+    </div>
 
-      <!-- HISTORIAL DE APORTES -->
+    <!-- ================= TAB 4: APORTES ================= -->
+    <div id="tab-aportes" class="tab-content hidden">
       <section class="history-section">
         <div class="history-header">
           <div class="history-title-area">
@@ -275,7 +282,7 @@
       </section>
     </div>
 
-    <!-- ================= CONTENIDO TAB 2: PRESUPUESTOS ================= -->
+    <!-- ================= TAB 5: PRESUPUESTOS ================= -->
     <div id="tab-presupuestos" class="tab-content hidden">
       <!-- RESUMEN DE PRESUPUESTO -->
       <section class="global-summary-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(22, 30, 49, 0.7) 100%); border-color: rgba(16, 185, 129, 0.25);">
