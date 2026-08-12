@@ -292,12 +292,12 @@ class StorageAdapter {
       const response = await fetch(`${API_BASE}/api/config/target-budget`);
       if (response.ok) {
         const data = await response.json();
-        return data.targetBudget || 200000;
+        return data.targetBudget || 300000000;
       }
-      return 200000;
+      return 300000000;
     } catch (e) {
       console.error("Fallo al obtener la meta global:", e);
-      return 200000;
+      return 300000000;
     }
   }
 

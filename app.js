@@ -196,7 +196,7 @@ function renderAll() {
   toggleTabButtons();
 }
 
-// 4. CALCULAR Y RENDERIZAR DASHBOARD GENERAL (SOCIOS)
+// 4. CALCULAR Y RENDERIZAR DASHBOARD GENERAL (100% BASE PESOS ARS)
 function calculateAndRenderDashboard() {
   let totalUSDCollected = 0;
   let totalARSCollected = 0;
@@ -204,22 +204,26 @@ function calculateAndRenderDashboard() {
   
   const partnerStats = {};
   PARTNERS.forEach(p => {
-    partnerStats[p] = { usdDirect: 0, arsTotal: 0, usdEquiv: 0, totalUsdValue: 0, arsEquivOfUsd: 0 };
+    partnerStats[p] = { usdDirect: 0, arsTotal: 0, usdEquiv: 0, totalUsdValue: 0, arsEquivOfUsd: 0, totalArsValue: 0 };
   });
+
+  const rateToday = state.dolarBlue.promedio || 1545;
 
   state.transactions.forEach(tx => {
     const amount = parseFloat(tx.amount);
     const rate = parseFloat(tx.rate || 1);
-    const rateUsed = rate > 1 ? rate : (state.dolarBlue.promedio || 1545);
+    const rateUsed = rate > 1 ? rate : rateToday;
     
     if (tx.currency === "USD") {
       totalUSDDirect += amount;
       totalUSDCollected += amount;
+      const arsEquiv = amount * rateUsed;
+      totalARSCollected += arsEquiv;
       if (partnerStats[tx.partner]) {
         partnerStats[tx.partner].usdDirect += amount;
         partnerStats[tx.partner].totalUsdValue += amount;
-        // Equivalente ARS histórico (al tipo de cambio del momento del aporte)
-        partnerStats[tx.partner].arsEquivOfUsd += amount * rateUsed;
+        partnerStats[tx.partner].arsEquivOfUsd += arsEquiv;
+        partnerStats[tx.partner].totalArsValue += arsEquiv;
       }
     } else {
       const usdEquiv = amount / rateUsed;
@@ -229,40 +233,49 @@ function calculateAndRenderDashboard() {
         partnerStats[tx.partner].arsTotal += amount;
         partnerStats[tx.partner].usdEquiv += usdEquiv;
         partnerStats[tx.partner].totalUsdValue += usdEquiv;
+        partnerStats[tx.partner].totalArsValue += amount;
       }
     }
   });
 
   state.partnerStats = partnerStats;
 
-  const targetBudget = state.targetBudget || 200000;
-  const progressPercent = Math.min((totalUSDCollected / targetBudget) * 100, 100).toFixed(1);
+  const targetBudget = state.targetBudget || 300000000; // $300.000.000 ARS
+  const progressPercent = Math.min((totalARSCollected / targetBudget) * 100, 100).toFixed(1);
   
-  document.getElementById("dash-progress-fill").style.width = `${progressPercent}%`;
-  document.getElementById("dash-progress-text").textContent = `${progressPercent}%`;
+  const fillElem = document.getElementById("dash-progress-fill");
+  if (fillElem) fillElem.style.width = `${progressPercent}%`;
+  const textElem = document.getElementById("dash-progress-text");
+  if (textElem) textElem.textContent = `${progressPercent}%`;
   
-  document.getElementById("dash-total-usd").textContent = formatCurrency(totalUSDCollected, "USD");
-  document.getElementById("dash-target-usd").textContent = formatCurrency(targetBudget, "USD");
+  const dashTotalArs = document.getElementById("dash-total-ars");
+  if (dashTotalArs) dashTotalArs.textContent = formatCurrency(totalARSCollected, "ARS");
   
-  const rateToday = state.dolarBlue.promedio || 1545;
-  const usdDirectInARS = totalUSDDirect * rateToday;
-  document.getElementById("dash-usd-direct").textContent = formatCurrency(totalUSDDirect, "USD");
-  document.getElementById("dash-usd-direct-ars").textContent = `Equiv. ${formatCurrency(usdDirectInARS, "ARS")}`;
-  document.getElementById("dash-ars-equiv").textContent = formatCurrency(totalARSCollected, "ARS");
-  document.getElementById("dash-ars-equiv-usd").textContent = `Equiv. ${formatCurrency(totalUSDCollected - totalUSDDirect, "USD")}`;
+  const dashTargetArs = document.getElementById("dash-target-ars");
+  if (dashTargetArs) dashTargetArs.textContent = formatCurrency(targetBudget, "ARS");
+  
+  const dashUsdRef = document.getElementById("dash-usd-ref");
+  if (dashUsdRef) dashUsdRef.textContent = `USD ${formatNumber(Math.round(totalUSDCollected))}`;
+  
+  const dashUsdDirect = document.getElementById("dash-usd-direct");
+  if (dashUsdDirect) dashUsdDirect.textContent = formatCurrency(totalUSDDirect, "USD");
+  
+  const dashUsdDirectArs = document.getElementById("dash-usd-direct-ars");
+  if (dashUsdDirectArs) dashUsdDirectArs.textContent = `Equiv. ${formatCurrency(totalUSDDirect * rateToday, "ARS")}`;
 }
 
-// 5. RENDERIZAR TARJETAS DE SOCIOS
+// 5. RENDERIZAR TARJETAS DE SOCIOS (CON METAS Y APORTES EN PESOS ARS)
 function renderPartners() {
   const container = document.getElementById("partners-grid");
+  if (!container) return;
   container.innerHTML = "";
 
   PARTNERS.forEach(partnerName => {
-    const stats = state.partnerStats[partnerName] || { usdDirect: 0, arsTotal: 0, totalUsdValue: 0, arsEquivOfUsd: 0 };
-    const remaining = Math.max(TARGET_PER_PARTNER - stats.totalUsdValue, 0);
-    const percentage = Math.min((stats.totalUsdValue / TARGET_PER_PARTNER) * 100, 100).toFixed(1);
-    const isCompleted = stats.totalUsdValue >= TARGET_PER_PARTNER;
-    const rateToday = state.dolarBlue.promedio || 1545;
+    const stats = state.partnerStats[partnerName] || { usdDirect: 0, arsTotal: 0, totalUsdValue: 0, arsEquivOfUsd: 0, totalArsValue: 0 };
+    const totalArsVal = stats.totalArsValue || (stats.arsTotal + stats.arsEquivOfUsd);
+    const remaining = Math.max(TARGET_PER_PARTNER - totalArsVal, 0);
+    const percentage = Math.min((totalArsVal / TARGET_PER_PARTNER) * 100, 100).toFixed(1);
+    const isCompleted = totalArsVal >= TARGET_PER_PARTNER;
 
     // Líneas de detalle de monedas con equivalente
     const usdLine = stats.usdDirect > 0
@@ -271,8 +284,7 @@ function renderPartners() {
       : `<span>Dólares: <strong style="color:var(--text-muted)">$ 0 USD</strong></span>`;
 
     const arsLine = stats.arsTotal > 0
-      ? `<span>Pesos: <strong class="text-primary">${formatCurrency(stats.arsTotal, "ARS")}</strong>
-           <span style="font-size:0.75rem;color:var(--text-muted)"> ≈ ${formatCurrency(stats.usdEquiv, "USD")}</span></span>`
+      ? `<span>Pesos: <strong class="text-primary">${formatCurrency(stats.arsTotal, "ARS")}</strong></span>`
       : `<span>Pesos: <strong style="color:var(--text-muted)">$ 0 ARS</strong></span>`;
 
     const card = document.createElement("div");
@@ -291,22 +303,16 @@ function renderPartners() {
       </div>
       <div class="partner-metrics">
         <div class="metric-row">
-          <span class="metric-label">Aportado (USD equiv.)</span>
-          <span class="metric-val ${isCompleted ? 'completed' : ''}">${formatCurrency(stats.totalUsdValue, "USD")}</span>
+          <span class="metric-label">Aportado ($ARS)</span>
+          <span class="metric-val ${isCompleted ? 'completed' : ''}">${formatCurrency(totalArsVal, "ARS")}</span>
         </div>
         <div class="metric-row">
-          <span class="metric-label">Saldo Pendiente</span>
-          <span class="metric-val ${isCompleted ? 'completed' : ''} ${isCompleted ? '' : 'remaining'}">${isCompleted ? "Completado" : formatCurrency(remaining, "USD")}</span>
+          <span class="metric-label">Saldo Pendiente ($ARS)</span>
+          <span class="metric-val ${isCompleted ? 'completed' : ''} ${isCompleted ? '' : 'remaining'}">${isCompleted ? "Completado" : formatCurrency(remaining, "ARS")}</span>
         </div>
-      </div>
-      <div class="partner-mini-history">
-        <div class="partner-mini-history-title">Desglose de aportes:</div>
-        <div class="partner-currencies" style="flex-direction:column; gap:6px;">
-          ${usdLine}
-          ${arsLine}
-        </div>
-        <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05); text-align:right; font-size:0.78rem; color:var(--primary-light); font-weight:500;">
-          📅 Ver detalle de aportes y fechas ➔
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:0.78rem; color:var(--text-muted);">
+          <span>Ref. USD: <strong>USD ${formatNumber(Math.round(stats.totalUsdValue))}</strong></span>
+          <span style="color:var(--primary-light);">Ver detalle ➔</span>
         </div>
       </div>
     `;
@@ -1689,13 +1695,13 @@ function renderCharts() {
 
   if (typeof Chart === 'undefined') return;
 
-  // Chart 1: Horizontal Bar Chart of Partner Progress vs 50k Goal
+  // Chart 1: Horizontal Bar Chart of Partner Progress vs $75M Goal in ARS
   const ctxGoal = document.getElementById("chart-partners-goal-bars");
   if (ctxGoal) {
     if (partnerGoalChart) partnerGoalChart.destroy();
 
-    const partnerDataUsd = PARTNERS.map(p => stats[p] ? parseFloat(stats[p].totalUsdValue.toFixed(2)) : 0);
-    const goalDataUsd = PARTNERS.map(() => TARGET_PER_PARTNER);
+    const partnerDataArs = PARTNERS.map(p => stats[p] ? Math.round(stats[p].totalArsValue || (stats[p].arsTotal + stats[p].arsEquivOfUsd)) : 0);
+    const goalDataArs = PARTNERS.map(() => TARGET_PER_PARTNER);
 
     partnerGoalChart = new Chart(ctxGoal, {
       type: 'bar',
@@ -1703,14 +1709,14 @@ function renderCharts() {
         labels: PARTNERS,
         datasets: [
           {
-            label: 'Aportado (USD)',
-            data: partnerDataUsd,
+            label: 'Aportado ($ARS)',
+            data: partnerDataArs,
             backgroundColor: '#818cf8',
             borderRadius: 6
           },
           {
-            label: 'Meta por Socio (USD 50.000)',
-            data: goalDataUsd,
+            label: 'Meta por Socio ($75.000.000 ARS)',
+            data: goalDataArs,
             backgroundColor: 'rgba(255, 255, 255, 0.06)',
             borderColor: 'rgba(255, 255, 255, 0.15)',
             borderWidth: 1,
@@ -1737,7 +1743,7 @@ function renderCharts() {
           legend: { position: 'top', labels: { color: '#94a3b8', font: { family: 'Outfit' } } },
           tooltip: {
             callbacks: {
-              label: (ctx) => ` ${ctx.dataset.label}: USD ${formatNumber(ctx.raw)} (${((ctx.raw / TARGET_PER_PARTNER)*100).toFixed(1)}%)`
+              label: (ctx) => ` ${ctx.dataset.label}: $${formatNumber(ctx.raw)} ARS (${((ctx.raw / TARGET_PER_PARTNER)*100).toFixed(1)}%)`
             }
           }
         }

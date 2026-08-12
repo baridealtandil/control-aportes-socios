@@ -110,27 +110,27 @@
         <div class="global-summary-grid">
           <div class="global-stats">
             <div class="stat-group">
-              <span class="stat-label">Total Recaudado (USD equiv.) <span id="dash-progress-text" class="partner-percentage" style="margin-left: 8px; font-size: 0.8rem; padding: 2px 8px;">0%</span></span>
-              <span class="stat-value-large" id="dash-total-usd">USD 0</span>
+              <span class="stat-label">Total Recaudado (Pesos ARS) <span id="dash-progress-text" class="partner-percentage" style="margin-left: 8px; font-size: 0.8rem; padding: 2px 8px;">0%</span></span>
+              <span class="stat-value-large" id="dash-total-ars">$ 0</span>
             </div>
             <div class="progress-container">
               <div class="progress-bar-fill" id="dash-progress-fill"></div>
             </div>
             <div class="stat-group">
-              <span class="stat-label">Meta Global del Proyecto <button class="btn-edit-target admin-only hidden" id="btn-edit-target-budget" style="background:none; border:none; color:var(--primary-light); cursor:pointer; padding:2px; font-size:0.8rem; margin-left: 5px;" title="Editar Meta Global">✏️</button></span>
-              <span class="stat-value-large" id="dash-target-usd">USD 200.000</span>
+              <span class="stat-label">Meta Global del Proyecto ($ARS) <button class="btn-edit-target admin-only hidden" id="btn-edit-target-budget" style="background:none; border:none; color:var(--primary-light); cursor:pointer; padding:2px; font-size:0.8rem; margin-left: 5px;" title="Editar Meta Global">✏️</button></span>
+              <span class="stat-value-large" id="dash-target-ars">$ 300.000.000</span>
             </div>
           </div>
           <div class="sub-stats-row">
-            <div class="sub-stat-card">
-              <div class="sub-stat-title">Aporte Dólares Directo</div>
-              <div class="sub-stat-val text-success" id="dash-usd-direct">USD 0</div>
-              <div class="sub-stat-equiv" id="dash-usd-direct-ars" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; font-weight: normal;">Equiv. $ 0 ARS</div>
+            <div class="sub-stat-card" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25);">
+              <div class="sub-stat-title" style="color: #34d399; font-weight: 700;">📌 Referencia Acumulada USD</div>
+              <div class="sub-stat-val text-success" id="dash-usd-ref">USD 0</div>
+              <div class="sub-stat-equiv" id="dash-usd-ref-detail" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; font-weight: normal;">Equiv. histórico para cierre de obra</div>
             </div>
             <div class="sub-stat-card">
-              <div class="sub-stat-title">Aporte Pesos (ARS)</div>
-              <div class="sub-stat-val text-primary" id="dash-ars-equiv">$0</div>
-              <div class="sub-stat-equiv" id="dash-ars-equiv-usd" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; font-weight: normal;">Equiv. USD 0</div>
+              <div class="sub-stat-title">Aportes en Dólares Físicos</div>
+              <div class="sub-stat-val text-primary" id="dash-usd-direct">USD 0</div>
+              <div class="sub-stat-equiv" id="dash-usd-direct-ars" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; font-weight: normal;">Equiv. $ 0 ARS</div>
             </div>
           </div>
         </div>
