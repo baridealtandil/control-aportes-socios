@@ -64,7 +64,7 @@ async function loadState() {
       window.AppStorage.getTargetBudget()
     ]);
     
-    state.transactions = transactions;
+    state.transactions = (transactions || []).map((tx, idx) => ({ ...tx, _idx: idx }));
     state.budgets = budgets;
     state.categories = categories;
     state.targetBudget = targetBudget;
@@ -347,7 +347,12 @@ function showPartnerHistory(partnerName) {
 
   const stats = state.partnerStats[partnerName] || { usdDirect: 0, arsTotal: 0, totalUsdValue: 0, arsEquivOfUsd: 0 };
   const txs = state.transactions.filter(t => t.partner === partnerName)
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+    .sort((a, b) => {
+      const timeA = new Date(a.date).getTime() || 0;
+      const timeB = new Date(b.date).getTime() || 0;
+      if (timeB !== timeA) return timeB - timeA;
+      return (b._idx ?? 0) - (a._idx ?? 0);
+    });
 
   modalName.textContent = `Aportes de ${partnerName}`;
 
@@ -476,7 +481,12 @@ function renderTransactions() {
     }
 
     return true;
-  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+  }).sort((a, b) => {
+    const timeA = new Date(a.date).getTime() || 0;
+    const timeB = new Date(b.date).getTime() || 0;
+    if (timeB !== timeA) return timeB - timeA; // Fecha más reciente primero
+    return (b._idx ?? 0) - (a._idx ?? 0); // Si es la misma fecha, el más reciente cargado va arriba
+  });
 
   if (filtered.length === 0) {
     const noRecordsHtml = `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:30px;">No se encontraron registros de aportes.</td></tr>`;
