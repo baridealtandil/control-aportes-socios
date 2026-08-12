@@ -270,25 +270,25 @@ function renderPartners() {
   if (!container) return;
   container.innerHTML = "";
 
+  // Encontrar el aporte máximo en Pesos
+  let maxARS = 0;
+  PARTNERS.forEach(p => {
+    const st = state.partnerStats[p];
+    const val = st ? (st.totalArsValue || (st.arsTotal + st.arsEquivOfUsd)) : 0;
+    if (val > maxARS) maxARS = val;
+  });
+
   PARTNERS.forEach(partnerName => {
     const stats = state.partnerStats[partnerName] || { usdDirect: 0, arsTotal: 0, totalUsdValue: 0, arsEquivOfUsd: 0, totalArsValue: 0 };
     const totalArsVal = stats.totalArsValue || (stats.arsTotal + stats.arsEquivOfUsd);
-    const remaining = Math.max(TARGET_PER_PARTNER - totalArsVal, 0);
+    
+    // Diferencia respecto al líder máximo
+    const diffARS = Math.max(maxARS - totalArsVal, 0);
+    const isLevel = diffARS < 100;
     const percentage = Math.min((totalArsVal / TARGET_PER_PARTNER) * 100, 100).toFixed(1);
-    const isCompleted = totalArsVal >= TARGET_PER_PARTNER;
-
-    // Líneas de detalle de monedas con equivalente
-    const usdLine = stats.usdDirect > 0
-      ? `<span>Dólares: <strong class="text-success">${formatCurrency(stats.usdDirect, "USD")}</strong>
-           <span style="font-size:0.75rem;color:var(--text-muted)"> ≈ ${formatCurrency(stats.arsEquivOfUsd, "ARS")}</span></span>`
-      : `<span>Dólares: <strong style="color:var(--text-muted)">$ 0 USD</strong></span>`;
-
-    const arsLine = stats.arsTotal > 0
-      ? `<span>Pesos: <strong class="text-primary">${formatCurrency(stats.arsTotal, "ARS")}</strong></span>`
-      : `<span>Pesos: <strong style="color:var(--text-muted)">$ 0 ARS</strong></span>`;
 
     const card = document.createElement("div");
-    card.className = `partner-card ${isCompleted ? "completed" : ""}`;
+    card.className = `partner-card ${isLevel ? "completed" : ""}`;
     card.style.cursor = "pointer";
     card.title = "Haz clic para ver el detalle de aportes con fechas";
     card.onclick = () => showPartnerHistory(partnerName);
@@ -299,16 +299,16 @@ function renderPartners() {
         <span class="partner-percentage">${percentage}%</span>
       </div>
       <div class="progress-container" style="height: 6px; margin: 5px 0;">
-        <div class="progress-bar-fill" style="width: ${percentage}%; background: ${isCompleted ? 'var(--success)' : 'var(--primary)'}"></div>
+        <div class="progress-bar-fill" style="width: ${percentage}%; background: ${isLevel ? 'var(--success)' : 'var(--primary)'}"></div>
       </div>
       <div class="partner-metrics">
         <div class="metric-row">
           <span class="metric-label">Aportado ($ARS)</span>
-          <span class="metric-val ${isCompleted ? 'completed' : ''}">${formatCurrency(totalArsVal, "ARS")}</span>
+          <span class="metric-val ${isLevel ? 'completed' : ''}">${formatCurrency(totalArsVal, "ARS")}</span>
         </div>
         <div class="metric-row">
-          <span class="metric-label">Saldo Pendiente ($ARS)</span>
-          <span class="metric-val ${isCompleted ? 'completed' : ''} ${isCompleted ? '' : 'remaining'}">${isCompleted ? "Completado" : formatCurrency(remaining, "ARS")}</span>
+          <span class="metric-label">Falta para Igualar</span>
+          <span class="metric-val ${isLevel ? 'completed' : 'remaining'}">${isLevel ? "Completado" : formatCurrency(diffARS, "ARS")}</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:0.78rem; color:var(--text-muted);">
           <span>Ref. USD: <strong>USD ${formatNumber(Math.round(stats.totalUsdValue))}</strong></span>
@@ -547,64 +547,75 @@ function renderTransactions() {
   });
 }
 
-// 7. CALCULAR Y RENDERIZAR DASHBOARD DE PRESUPUESTOS
+// 7. CALCULAR Y RENDERIZAR DASHBOARD DE PRESUPUESTOS (100% BASE PESOS ARS)
 function calculateAndRenderBudgetDashboard() {
-  let totalBudgetUSD = 0;
-  let totalSpentUSD = 0;
+  let totalBudgetARS = 0;
+  let totalSpentARS = 0;
 
-  // 1. Sumar presupuestos convertidos a USD (usando la cotización promedio de hoy)
   const rateToday = state.dolarBlue.promedio || 1545;
+
+  // 1. Sumar presupuestos en ARS (si está en USD se convierte a ARS con rateToday)
   state.budgets.forEach(b => {
     const amt = parseFloat(b.amount);
-    if (b.currency === "USD") {
-      totalBudgetUSD += amt;
+    if (b.currency === "ARS") {
+      totalBudgetARS += amt;
     } else {
-      totalBudgetUSD += (amt / rateToday);
+      totalBudgetARS += (amt * rateToday);
     }
   });
 
-  // 2. Sumar aportes que están vinculados a presupuestos
+  // 2. Sumar aportes vinculados a presupuestos en ARS
   state.transactions.forEach(tx => {
     if (tx.budget_id) {
       const amt = parseFloat(tx.amount);
       const rate = parseFloat(tx.rate || 1);
-      if (tx.currency === "USD") {
-        totalSpentUSD += amt;
+      if (tx.currency === "ARS") {
+        totalSpentARS += amt;
       } else {
-        totalSpentUSD += (amt / rate);
+        const txRate = rate > 1 ? rate : rateToday;
+        totalSpentARS += (amt * txRate);
       }
     }
   });
 
-  const pending = Math.max(totalBudgetUSD - totalSpentUSD, 0);
-  const deviation = totalSpentUSD - totalBudgetUSD;
-  const targetBudget = state.targetBudget || 200000;
-  const unallocated = Math.max(targetBudget - totalBudgetUSD, 0);
+  const pendingARS = Math.max(totalBudgetARS - totalSpentARS, 0);
+  const deviationARS = totalSpentARS - totalBudgetARS;
+  const targetBudgetARS = state.targetBudget || 300000000;
+  const unallocatedARS = Math.max(targetBudgetARS - totalBudgetARS, 0);
 
-  // Actualizar UI
-  document.getElementById("budget-total-usd").textContent = formatCurrency(totalBudgetUSD, "USD");
-  document.getElementById("budget-spent-usd").textContent = formatCurrency(totalSpentUSD, "USD");
-  document.getElementById("budget-pending-usd").textContent = formatCurrency(pending, "USD");
-  document.getElementById("budget-unallocated-usd").textContent = formatCurrency(unallocated, "USD");
+  // Actualizar UI en Pesos ARS
+  const totalElem = document.getElementById("budget-total-ars") || document.getElementById("budget-total-usd");
+  if (totalElem) totalElem.textContent = formatCurrency(totalBudgetARS, "ARS");
+
+  const spentElem = document.getElementById("budget-spent-ars") || document.getElementById("budget-spent-usd");
+  if (spentElem) spentElem.textContent = formatCurrency(totalSpentARS, "ARS");
+
+  const pendingElem = document.getElementById("budget-pending-ars") || document.getElementById("budget-pending-usd");
+  if (pendingElem) pendingElem.textContent = formatCurrency(pendingARS, "ARS");
+
+  const unallocatedElem = document.getElementById("budget-unallocated-ars") || document.getElementById("budget-unallocated-usd");
+  if (unallocatedElem) unallocatedElem.textContent = formatCurrency(unallocatedARS, "ARS");
   
-  const devElement = document.getElementById("budget-deviation-usd");
-  devElement.textContent = formatCurrency(Math.abs(deviation), "USD");
-  if (deviation > 0) {
-    devElement.className = "sub-stat-val text-danger";
-    devElement.textContent = `+${formatCurrency(deviation, "USD")} (Excedido)`;
-  } else if (deviation < 0) {
-    devElement.className = "sub-stat-val text-success";
-    devElement.textContent = `-${formatCurrency(Math.abs(deviation), "USD")} (Bajo Estimado)`;
-  } else {
-    devElement.className = "sub-stat-val text-muted";
-    devElement.textContent = `USD 0 (Equilibrado)`;
+  const devElement = document.getElementById("budget-deviation-ars") || document.getElementById("budget-deviation-usd");
+  if (devElement) {
+    if (deviationARS > 0) {
+      devElement.className = "sub-stat-val text-danger";
+      devElement.textContent = `+${formatCurrency(deviationARS, "ARS")} (Excedido)`;
+    } else if (deviationARS < 0) {
+      devElement.className = "sub-stat-val text-success";
+      devElement.textContent = `-${formatCurrency(Math.abs(deviationARS), "ARS")} (Bajo Estimado)`;
+    } else {
+      devElement.className = "sub-stat-val text-muted";
+      devElement.textContent = `$ 0 ARS (Equilibrado)`;
+    }
   }
 
   // Barra de progreso del presupuesto financiado
-  const progressPercent = totalBudgetUSD > 0 
-    ? Math.min((totalSpentUSD / totalBudgetUSD) * 100, 100).toFixed(1) 
+  const progressPercent = totalBudgetARS > 0 
+    ? Math.min((totalSpentARS / totalBudgetARS) * 100, 100).toFixed(1) 
     : 0;
-  document.getElementById("budget-progress-fill").style.width = `${progressPercent}%`;
+  const fillElem = document.getElementById("budget-progress-fill");
+  if (fillElem) fillElem.style.width = `${progressPercent}%`;
 }
 
 // 8. RENDERIZAR TABLA E HISTORIAL DE PRESUPUESTOS (TAB 2)
@@ -1628,10 +1639,21 @@ function shareWhatsAppSummary() {
 
   const partnerLines = PARTNERS.map(p => {
     const pArs = partnerArsTotals[p] || 0;
-    const pUsd = stats[p] ? stats[p].totalUsdValue : 0;
+    const diffARS = maxARS - pArs;
     const isLeader = p === maxPartner && maxARS > 0;
+    const isLevel = diffARS < 100;
     const icon = isLeader ? '👑' : (pArs > 0 ? '🔹' : '⚪');
-    return `${icon} *${p}:* $${formatNumber(pArs)} ARS _(Ref: USD ${formatNumber(Math.round(pUsd))})_`;
+    
+    let statusStr = "";
+    if (isLeader) {
+      statusStr = `_(Máximo Aportante)_`;
+    } else if (isLevel) {
+      statusStr = `_(Nivelado)_`;
+    } else {
+      statusStr = `_(Falta igualar: $${formatNumber(Math.round(diffARS))} ARS)_`;
+    }
+    
+    return `${icon} *${p}:* $${formatNumber(pArs)} ARS ${statusStr}`;
   }).join('\n');
 
   let text = `🍺 *PACA BAR — ESTADO DE APORTES*\n`;
