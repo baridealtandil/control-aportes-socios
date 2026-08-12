@@ -1501,29 +1501,11 @@ function renderEqualizationBoard() {
 
   const rateToday = state.dolarBlue.promedio || 1545;
 
-  // Calcular el valor acumulado en ARS equivalente de cada socio
-  const partnerArsValues = {};
-  PARTNERS.forEach(p => { partnerArsValues[p] = 0; });
-
-  state.transactions.forEach(tx => {
-    const amount = parseFloat(tx.amount);
-    const rate = parseFloat(tx.rate || 1);
-    if (tx.currency === "ARS") {
-      partnerArsValues[tx.partner] += amount;
-    } else {
-      const txRate = rate > 1 ? rate : rateToday;
-      partnerArsValues[tx.partner] += (amount * txRate);
-    }
-  });
-
-  // Encontrar el máximo aportado
+  // Encontrar el máximo aportado en USD equivalente
   let maxUSD = 0;
-  let maxARS = 0;
   PARTNERS.forEach(p => {
-    const totalUSD = stats[p] ? parseFloat(stats[p].totalUsdValue.toFixed(2)) : 0;
-    const totalARS = partnerArsValues[p] || 0;
+    const totalUSD = stats[p] ? stats[p].totalUsdValue : 0;
     if (totalUSD > maxUSD) maxUSD = totalUSD;
-    if (totalARS > maxARS) maxARS = totalARS;
   });
 
   // Ordenar socios de MAYOR A MENOR APORTANTE (líder primero)
@@ -1533,15 +1515,22 @@ function renderEqualizationBoard() {
     return totalUsdB - totalUsdA;
   });
 
-  sortedPartners.forEach(p => {
-    const totalUSD = stats[p] ? parseFloat(stats[p].totalUsdValue.toFixed(2)) : 0;
-    const diffUSD = Math.max(parseFloat((maxUSD - totalUSD).toFixed(2)), 0);
-    const diffARS = Math.max(Math.round(maxARS - partnerArsValues[p]), 0);
-    const isLevel = diffUSD < 0.05;
+  sortedPartners.forEach((p, index) => {
+    const totalUSD = stats[p] ? stats[p].totalUsdValue : 0;
+    const rawDiffUSD = maxUSD - totalUSD;
+    
+    // Si la diferencia es menor a 1 USD (o ~1500 ARS), se considera totalmente Nivelado por redondeo
+    const isLevel = rawDiffUSD < 1.0;
+    const diffUSD = isLevel ? 0 : Math.round(rawDiffUSD);
+    const diffARS = isLevel ? 0 : Math.round(rawDiffUSD * rateToday);
 
     let statusBadge = "";
     if (isLevel && maxUSD > 0) {
-      statusBadge = `<span class="badge-desviacion underspent" style="background:rgba(16,185,129,0.2);color:var(--success-light);padding:4px 8px;border-radius:6px;font-size:0.75rem;">👑 Máximo Aportante</span>`;
+      if (index === 0) {
+        statusBadge = `<span class="badge-desviacion underspent" style="background:rgba(16,185,129,0.2);color:var(--success-light);padding:4px 8px;border-radius:6px;font-size:0.75rem;">👑 Máximo Aportante</span>`;
+      } else {
+        statusBadge = `<span class="badge-desviacion underspent" style="background:rgba(16,185,129,0.15);color:#34d399;padding:4px 8px;border-radius:6px;font-size:0.75rem;">✅ Nivelado</span>`;
+      }
     } else if (maxUSD === 0) {
       statusBadge = `<span class="badge-desviacion text-muted" style="font-size:0.75rem;">Sin aportes</span>`;
     } else {
