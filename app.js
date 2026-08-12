@@ -188,7 +188,7 @@ function renderAll() {
   renderAdminUI();
   calculateAndRenderDashboard();
   renderPartners();
-  renderEqualizationBoard();
+  renderEqualizationTable();
   renderCaja();
   renderTransactions();
   calculateAndRenderBudgetDashboard();
@@ -1578,6 +1578,8 @@ function renderEqualizationTable() {
     }
   });
 }
+
+const renderEqualizationBoard = renderEqualizationTable;
 
 // 18. COMPARTIR RESUMEN DEL PROYECTO POR WHATSAPP (CON ENFOQUE PESOS ARS)
 function shareWhatsAppSummary() {
