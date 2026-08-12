@@ -167,14 +167,22 @@ function loadBudgetSelectOptions() {
   }
 }
 
-// Sugerencias inteligentes de proveedores basadas en los existentes
+// Sugerencias inteligentes de proveedores basadas en los existentes + por defecto
 function populateProviderSuggestions() {
   const datalist = document.getElementById("provider-suggestions");
+  if (!datalist) return;
   datalist.innerHTML = "";
 
-  const providers = new Set();
-  state.transactions.forEach(t => { if (t.provider) providers.add(t.provider.trim()); });
-  state.budgets.forEach(b => { if (b.provider) providers.add(b.provider.trim()); });
+  const defaultProviders = [
+    "Fudo", "Mercado Libre", "Pinturería Tandil", "Corralón de Materiales",
+    "Electricista Matriculado", "Plomero / Albañil", "Techista", "Herrería / Vidriería",
+    "Durlock / Especialista Acústico", "Climatización Comercial", "Equipamiento Cervecero",
+    "Gastronomía Industrial", "Sonido Profesional", "Bazar Mayorista", "Fábrica Muebles Gastronómicos"
+  ];
+
+  const providers = new Set(defaultProviders);
+  state.transactions.forEach(t => { if (t.provider && t.provider.trim()) providers.add(t.provider.trim()); });
+  state.budgets.forEach(b => { if (b.provider && b.provider.trim()) providers.add(b.provider.trim()); });
 
   providers.forEach(p => {
     const option = document.createElement("option");
@@ -1269,6 +1277,24 @@ function initEventListeners() {
   // Transacciones
   document.getElementById("tx-form").addEventListener("submit", saveTransaction);
   document.getElementById("tx-currency").addEventListener("change", toggleRateVisibility);
+  document.getElementById("tx-budget-id").addEventListener("change", (e) => {
+    const budgetId = e.target.value;
+    if (budgetId) {
+      const budget = state.budgets.find(b => b.id === budgetId);
+      if (budget) {
+        if (budget.provider) {
+          document.getElementById("tx-provider").value = budget.provider;
+        }
+        if (budget.concept) {
+          const conceptInput = document.getElementById("tx-concept");
+          if (!conceptInput.value) conceptInput.value = budget.concept;
+        }
+        if (budget.phase) {
+          document.getElementById("tx-phase").value = budget.phase;
+        }
+      }
+    }
+  });
   
   // Presupuestos
   document.getElementById("budget-form").addEventListener("submit", saveBudget);
