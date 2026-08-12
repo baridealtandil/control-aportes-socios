@@ -1607,13 +1607,12 @@ function renderEqualizationTable() {
 
 const renderEqualizationBoard = renderEqualizationTable;
 
-// 18. COMPARTIR RESUMEN DEL PROYECTO POR WHATSAPP (CON ENFOQUE PESOS ARS)
+// 18. COMPARTIR RESUMEN DEL PROYECTO POR WHATSAPP (100% BASE PESOS ARS - FORMATO EJECUTIVO)
 function shareWhatsAppSummary() {
   const stats = state.partnerStats || {};
   const rateToday = state.dolarBlue.promedio || 1545;
   
   let totalUSD = 0;
-  let totalUSDDirect = 0;
   let totalARS = 0;
   
   const partnerArsTotals = {};
@@ -1623,7 +1622,6 @@ function shareWhatsAppSummary() {
     const amt = parseFloat(tx.amount);
     const rate = parseFloat(tx.rate || 1);
     if (tx.currency === "USD") {
-      totalUSDDirect += amt;
       totalUSD += amt;
       const rateUsed = rate > 1 ? rate : rateToday;
       const arsEquiv = amt * rateUsed;
@@ -1639,39 +1637,40 @@ function shareWhatsAppSummary() {
 
   const dateFormatted = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  // Encontrar máximo aportante en ARS
-  let maxPartner = "";
+  // Ordenar socios por mayor aportante en Pesos (Líder primero)
+  const sortedPartners = [...PARTNERS].sort((a, b) => (partnerArsTotals[b] || 0) - (partnerArsTotals[a] || 0));
+
   let maxARS = 0;
-  PARTNERS.forEach(p => {
-    if (partnerArsTotals[p] > maxARS) { maxARS = partnerArsTotals[p]; maxPartner = p; }
+  sortedPartners.forEach(p => {
+    if (partnerArsTotals[p] > maxARS) maxARS = partnerArsTotals[p];
   });
 
-  const partnerLines = PARTNERS.map(p => {
+  const partnerLines = sortedPartners.map((p, index) => {
     const pArs = partnerArsTotals[p] || 0;
-    const diffARS = maxARS - pArs;
-    const isLeader = p === maxPartner && maxARS > 0;
+    const diffARS = Math.max(maxARS - pArs, 0);
+    const isLeader = index === 0 && maxARS > 0;
     const isLevel = diffARS < 100;
     const icon = isLeader ? '👑' : (pArs > 0 ? '🔹' : '⚪');
     
     let statusStr = "";
     if (isLeader) {
-      statusStr = `_(Máximo Aportante)_`;
+      statusStr = `   └ _Líder / Máximo Aportante_`;
     } else if (isLevel) {
-      statusStr = `_(Nivelado)_`;
+      statusStr = `   └ _Nivelado_`;
     } else {
-      statusStr = `_(Falta igualar: $${formatNumber(Math.round(diffARS))} ARS)_`;
+      statusStr = `   └ _Falta igualar: $${formatNumber(Math.round(diffARS))} ARS_`;
     }
     
-    return `${icon} *${p}:* $${formatNumber(pArs)} ARS ${statusStr}`;
-  }).join('\n');
+    return `${icon} *${p}:* $${formatNumber(Math.round(pArs))} ARS\n${statusStr}`;
+  }).join('\n\n');
 
-  let text = `🍺 *PACA BAR — ESTADO DE APORTES*\n`;
-  text += `📅 _Fecha: ${dateFormatted}_\n`;
-  text += `────────────────────────\n\n`;
-  text += `📊 *RESUMEN DE RECAUDACIÓN*\n`;
-  text += `• Total Recaudado: *$${formatNumber(totalARS)} ARS*\n`;
-  text += `• Equivalente USD según cambio del dólar del día del aporte: *USD ${formatNumber(Math.round(totalUSD))}*\n\n`;
-  text += `👥 *APORTES POR SOCIO ($ARS)*\n`;
+  let text = `🍺 *PACA BAR — CONTROL DE APORTES*\n`;
+  text += `📅 _Reporte al ${dateFormatted}_\n`;
+  text += `───────────────────────\n\n`;
+  text += `📊 *RESUMEN GLOBAL*\n`;
+  text += `• Total Recaudado: *$${formatNumber(Math.round(totalARS))} ARS*\n`;
+  text += `• Acumulado USD Ref.: *USD ${formatNumber(Math.round(totalUSD))}*\n\n`;
+  text += `👥 *ESTADO POR SOCIO ($ARS)*\n\n`;
   text += `${partnerLines}`;
 
   const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
