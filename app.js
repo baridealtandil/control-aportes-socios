@@ -278,7 +278,16 @@ function renderPartners() {
     if (val > maxARS) maxARS = val;
   });
 
-  PARTNERS.forEach(partnerName => {
+  // Ordenar socios de mayor a menor aportante en Pesos (líder primero)
+  const sortedPartners = [...PARTNERS].sort((a, b) => {
+    const stA = state.partnerStats[a];
+    const valA = stA ? (stA.totalArsValue || (stA.arsTotal + stA.arsEquivOfUsd)) : 0;
+    const stB = state.partnerStats[b];
+    const valB = stB ? (stB.totalArsValue || (stB.arsTotal + stB.arsEquivOfUsd)) : 0;
+    return valB - valA;
+  });
+
+  sortedPartners.forEach(partnerName => {
     const stats = state.partnerStats[partnerName] || { usdDirect: 0, arsTotal: 0, totalUsdValue: 0, arsEquivOfUsd: 0, totalArsValue: 0 };
     const totalArsVal = stats.totalArsValue || (stats.arsTotal + stats.arsEquivOfUsd);
     
