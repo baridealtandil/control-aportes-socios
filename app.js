@@ -1488,50 +1488,60 @@ function renderCaja() {
   }
 }
 
-// 17. TABLA DE NIVELACIÓN DE APORTES (IGUALAR AL MÁXIMO)
-function renderEqualizationBoard() {
+// 17. RENDERIZAR TABLA DE NIVELACIÓN DE APORTES (100% BASE PESOS ARS)
+function renderEqualizationTable() {
   const tbody = document.getElementById("equalization-table-body");
-  const mobileList = document.getElementById("equalization-mobile-list");
+  const mobileList = document.getElementById("mobile-equalization-list");
+  const stats = state.partnerStats;
+
   if (!tbody) return;
   tbody.innerHTML = "";
   if (mobileList) mobileList.innerHTML = "";
-
-  const stats = state.partnerStats;
   if (!stats) return;
 
   const rateToday = state.dolarBlue.promedio || 1545;
 
-  // Encontrar el máximo aportado en USD equivalente
-  let maxUSD = 0;
-  PARTNERS.forEach(p => {
-    const totalUSD = stats[p] ? stats[p].totalUsdValue : 0;
-    if (totalUSD > maxUSD) maxUSD = totalUSD;
+  // 1. Calcular el valor acumulado real en Pesos (ARS) de cada socio
+  const partnerArsTotals = {};
+  PARTNERS.forEach(p => { partnerArsTotals[p] = 0; });
+
+  state.transactions.forEach(tx => {
+    const amount = parseFloat(tx.amount);
+    const rate = parseFloat(tx.rate || 1);
+    if (tx.currency === "ARS") {
+      partnerArsTotals[tx.partner] += amount;
+    } else {
+      const txRate = rate > 1 ? rate : rateToday;
+      partnerArsTotals[tx.partner] += (amount * txRate);
+    }
   });
 
-  // Ordenar socios de MAYOR A MENOR APORTANTE (líder primero)
-  const sortedPartners = [...PARTNERS].sort((a, b) => {
-    const totalUsdA = stats[a] ? stats[a].totalUsdValue : 0;
-    const totalUsdB = stats[b] ? stats[b].totalUsdValue : 0;
-    return totalUsdB - totalUsdA;
+  // 2. Encontrar el Máximo Aportado en Pesos (ARS)
+  let maxARS = 0;
+  PARTNERS.forEach(p => {
+    if (partnerArsTotals[p] > maxARS) maxARS = partnerArsTotals[p];
   });
+
+  // 3. Ordenar socios por mayor aportante en Pesos (Líder primero)
+  const sortedPartners = [...PARTNERS].sort((a, b) => partnerArsTotals[b] - partnerArsTotals[a]);
 
   sortedPartners.forEach((p, index) => {
-    const totalUSD = stats[p] ? stats[p].totalUsdValue : 0;
-    const rawDiffUSD = maxUSD - totalUSD;
+    const totalARS = partnerArsTotals[p];
+    const rawDiffARS = maxARS - totalARS;
     
-    // Si la diferencia es menor a 1 USD (o ~1500 ARS), se considera totalmente Nivelado por redondeo
-    const isLevel = rawDiffUSD < 1.0;
-    const diffUSD = isLevel ? 0 : Math.round(rawDiffUSD);
-    const diffARS = isLevel ? 0 : Math.round(rawDiffUSD * rateToday);
+    // Umbral de tolerancia de redondeo: si la diferencia es menor a $100 ARS se considera nivelado
+    const isLevel = rawDiffARS < 100;
+    const diffARS = isLevel ? 0 : Math.round(rawDiffARS);
+    const refUSD = isLevel ? 0 : Math.round(diffARS / rateToday);
 
     let statusBadge = "";
-    if (isLevel && maxUSD > 0) {
+    if (isLevel && maxARS > 0) {
       if (index === 0) {
         statusBadge = `<span class="badge-desviacion underspent" style="background:rgba(16,185,129,0.2);color:var(--success-light);padding:4px 8px;border-radius:6px;font-size:0.75rem;">👑 Máximo Aportante</span>`;
       } else {
         statusBadge = `<span class="badge-desviacion underspent" style="background:rgba(16,185,129,0.15);color:#34d399;padding:4px 8px;border-radius:6px;font-size:0.75rem;">✅ Nivelado</span>`;
       }
-    } else if (maxUSD === 0) {
+    } else if (maxARS === 0) {
       statusBadge = `<span class="badge-desviacion text-muted" style="font-size:0.75rem;">Sin aportes</span>`;
     } else {
       statusBadge = `<span class="badge-desviacion overspent" style="background:rgba(239,68,68,0.15);color:#f87171;padding:4px 8px;border-radius:6px;font-size:0.75rem;">Falta Nivelar</span>`;
@@ -1539,7 +1549,7 @@ function renderEqualizationBoard() {
 
     const diffText = isLevel
       ? `<span class="text-success" style="font-weight:600">Nivelado</span>`
-      : `<span style="font-weight:600;color:var(--text-main)">$ ${new Intl.NumberFormat("es-AR",{maximumFractionDigits:0}).format(diffARS)} ARS <span style="font-size:0.8rem;color:var(--text-muted);font-weight:normal;">o</span> USD ${new Intl.NumberFormat("es-AR",{maximumFractionDigits:0}).format(diffUSD)}</span>`;
+      : `<span style="font-weight:700;color:var(--text-main);font-size:0.95rem;">$ ${new Intl.NumberFormat("es-AR",{maximumFractionDigits:0}).format(diffARS)} ARS <span style="font-size:0.78rem;color:var(--text-muted);font-weight:normal;">(Ref: USD ${refUSD})</span></span>`;
 
     // ── FILA DESKTOP ──────────────────────────────────────────
     const tr = document.createElement("tr");
@@ -1550,7 +1560,7 @@ function renderEqualizationBoard() {
     `;
     tbody.appendChild(tr);
 
-    // ── TARJETA MÓVIL (SOLO IMPORTE FALTANTE PARA IGUALAR) ─────
+    // ── TARJETA MÓVIL (SOLO IMPORTE FALTANTE PARA IGUALAR EN PESOS) ─────
     if (mobileList) {
       const card = document.createElement("div");
       card.className = "mobile-tx-card";
@@ -1569,60 +1579,61 @@ function renderEqualizationBoard() {
   });
 }
 
-// 18. COMPARTIR RESUMEN DEL PROYECTO POR WHATSAPP
+// 18. COMPARTIR RESUMEN DEL PROYECTO POR WHATSAPP (CON ENFOQUE PESOS ARS)
 function shareWhatsAppSummary() {
   const stats = state.partnerStats || {};
   const rateToday = state.dolarBlue.promedio || 1545;
-  const targetBudget = state.targetBudget || 200000;
   
   let totalUSD = 0;
   let totalUSDDirect = 0;
   let totalARS = 0;
   
+  const partnerArsTotals = {};
+  PARTNERS.forEach(p => { partnerArsTotals[p] = 0; });
+
   state.transactions.forEach(tx => {
     const amt = parseFloat(tx.amount);
     const rate = parseFloat(tx.rate || 1);
     if (tx.currency === "USD") {
       totalUSDDirect += amt;
       totalUSD += amt;
+      const rateUsed = rate > 1 ? rate : rateToday;
+      const arsEquiv = amt * rateUsed;
+      totalARS += arsEquiv;
+      partnerArsTotals[tx.partner] += arsEquiv;
     } else {
       const rateUsed = rate > 1 ? rate : rateToday;
       totalARS += amt;
       totalUSD += (amt / rateUsed);
+      partnerArsTotals[tx.partner] += amt;
     }
   });
 
-  const progressPercent = Math.min((totalUSD / targetBudget) * 100, 100).toFixed(1);
   const dateFormatted = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  // Encontrar máximo aportante
+  // Encontrar máximo aportante en ARS
   let maxPartner = "";
-  let maxUSD = 0;
+  let maxARS = 0;
   PARTNERS.forEach(p => {
-    const pUSD = stats[p] ? stats[p].totalUsdValue : 0;
-    if (pUSD > maxUSD) { maxUSD = pUSD; maxPartner = p; }
+    if (partnerArsTotals[p] > maxARS) { maxARS = partnerArsTotals[p]; maxPartner = p; }
   });
 
   const partnerLines = PARTNERS.map(p => {
-    const pStats = stats[p] || { totalUsdValue: 0 };
-    const pUsd = pStats.totalUsdValue || 0;
-    const isLeader = p === maxPartner && maxUSD > 0;
-    const icon = isLeader ? '👑' : (pUsd > 0 ? '🔹' : '⚪');
-    const pPct = ((pUsd / TARGET_PER_PARTNER) * 100).toFixed(1);
-    return `${icon} *${p}:* USD ${formatNumber(Math.round(pUsd))} _(${pPct}%)_`;
+    const pArs = partnerArsTotals[p] || 0;
+    const pUsd = stats[p] ? stats[p].totalUsdValue : 0;
+    const isLeader = p === maxPartner && maxARS > 0;
+    const icon = isLeader ? '👑' : (pArs > 0 ? '🔹' : '⚪');
+    return `${icon} *${p}:* $${formatNumber(pArs)} ARS _(Ref: USD ${formatNumber(Math.round(pUsd))})_`;
   }).join('\n');
 
   let text = `🍺 *PACA BAR — ESTADO DE APORTES*\n`;
   text += `📅 _Fecha: ${dateFormatted}_\n`;
   text += `────────────────────────\n\n`;
-  text += `📊 *RESUMEN GLOBAL*\n`;
-  text += `• Recaudado: *USD ${formatNumber(Math.round(totalUSD))}* (${progressPercent}%)\n`;
-  text += `• Meta Global: *USD ${formatNumber(targetBudget)}*\n`;
-  text += `• Dólar Blue: *$${formatNumber(rateToday)} ARS*\n\n`;
-  text += `💵 *FONDOS APORTADOS*\n`;
-  text += `• Dólares Directos: *USD ${formatNumber(totalUSDDirect)}*\n`;
-  text += `• Pesos ARS: *$${formatNumber(totalARS)} ARS*\n\n`;
-  text += `👥 *AVANCE SOCIOS* _(Meta 50k USD c/u)_\n`;
+  text += `📊 *RESUMEN DE RECAUDACIÓN*\n`;
+  text += `• Total Recaudado: *$${formatNumber(totalARS)} ARS*\n`;
+  text += `• Contador Ref.: *USD ${formatNumber(Math.round(totalUSD))}*\n`;
+  text += `• Cotización Blue: *$${formatNumber(rateToday)} ARS*\n\n`;
+  text += `👥 *APORTES POR SOCIO ($ARS)*\n`;
   text += `${partnerLines}\n\n`;
   text += `────────────────────────\n`;
   text += `📲 _Tablero Online:_\nhttps://control-aportes-socios.vercel.app/`;
