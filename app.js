@@ -1654,7 +1654,7 @@ function shareWhatsAppSummary() {
     
     let statusStr = "";
     if (isLeader) {
-      statusStr = `   └ _Líder / Máximo Aportante_`;
+      statusStr = `   └ _Máximo Aportante_`;
     } else if (isLevel) {
       statusStr = `   └ _Nivelado_`;
     } else {
