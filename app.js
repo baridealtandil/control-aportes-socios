@@ -1661,8 +1661,7 @@ function shareWhatsAppSummary() {
   text += `────────────────────────\n\n`;
   text += `📊 *RESUMEN DE RECAUDACIÓN*\n`;
   text += `• Total Recaudado: *$${formatNumber(totalARS)} ARS*\n`;
-  text += `• Contador Ref.: *USD ${formatNumber(Math.round(totalUSD))}*\n`;
-  text += `• Cotización Blue: *$${formatNumber(rateToday)} ARS*\n\n`;
+  text += `• Equivalente USD según cambio del dólar del día del aporte: *USD ${formatNumber(Math.round(totalUSD))}*\n\n`;
   text += `👥 *APORTES POR SOCIO ($ARS)*\n`;
   text += `${partnerLines}\n\n`;
   text += `────────────────────────\n`;
