@@ -1663,9 +1663,7 @@ function shareWhatsAppSummary() {
   text += `• Total Recaudado: *$${formatNumber(totalARS)} ARS*\n`;
   text += `• Equivalente USD según cambio del dólar del día del aporte: *USD ${formatNumber(Math.round(totalUSD))}*\n\n`;
   text += `👥 *APORTES POR SOCIO ($ARS)*\n`;
-  text += `${partnerLines}\n\n`;
-  text += `────────────────────────\n`;
-  text += `📲 _Tablero Online:_\nhttps://control-aportes-socios.vercel.app/`;
+  text += `${partnerLines}`;
 
   const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   window.open(url, '_blank');
