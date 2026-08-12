@@ -1666,7 +1666,7 @@ function shareWhatsAppSummary() {
 
   let text = `🍺 *PACA BAR — CONTROL DE APORTES*\n`;
   text += `📅 _Reporte al ${dateFormatted}_\n`;
-  text += `───────────────────────\n\n`;
+  text += `───────────────────────\n`;
   text += `📊 *RESUMEN GLOBAL*\n`;
   text += `• Total Recaudado: *$${formatNumber(Math.round(totalARS))}*\n`;
   text += `• Acumulado USD Ref.: *USD ${formatNumber(Math.round(totalUSD))}*\n\n`;
