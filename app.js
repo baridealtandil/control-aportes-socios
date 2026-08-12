@@ -1658,19 +1658,19 @@ function shareWhatsAppSummary() {
     } else if (isLevel) {
       statusStr = `   └ _Nivelado_`;
     } else {
-      statusStr = `   └ _Falta igualar: $${formatNumber(Math.round(diffARS))} ARS_`;
+      statusStr = `   └ _Falta igualar: $${formatNumber(Math.round(diffARS))}_`;
     }
     
-    return `${icon} *${p}:* $${formatNumber(Math.round(pArs))} ARS\n${statusStr}`;
+    return `${icon} *${p}:* $${formatNumber(Math.round(pArs))}\n${statusStr}`;
   }).join('\n\n');
 
   let text = `🍺 *PACA BAR — CONTROL DE APORTES*\n`;
   text += `📅 _Reporte al ${dateFormatted}_\n`;
   text += `───────────────────────\n\n`;
   text += `📊 *RESUMEN GLOBAL*\n`;
-  text += `• Total Recaudado: *$${formatNumber(Math.round(totalARS))} ARS*\n`;
+  text += `• Total Recaudado: *$${formatNumber(Math.round(totalARS))}*\n`;
   text += `• Acumulado USD Ref.: *USD ${formatNumber(Math.round(totalUSD))}*\n\n`;
-  text += `👥 *ESTADO POR SOCIO ($ARS)*\n\n`;
+  text += `👥 *ESTADO POR SOCIO*\n\n`;
   text += `${partnerLines}`;
 
   const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
