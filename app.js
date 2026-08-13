@@ -622,66 +622,104 @@ function renderResumenCuenta() {
 
   const rateToday = state.dolarBlue.promedio || 1545;
 
-  // Helper: Identificar si una transacción es un Pago a Proveedor/Obra (Egreso -) o un Aporte/Ingreso (+)
-  const isActualPayment = (tx) => {
-    // Si proviene de Sociedad (Crédito) y tiene presupuesto o proveedor, es un PAGO DE OBRA (Egreso -)
-    if (tx.partner === "Sociedad (Crédito)" && (tx.budget_id || tx.provider)) {
-      return true;
-    }
-    // Si el origen es un socio humano (Franco, David, Gabriel, Sandra), es un APORTE DE CAPITAL (Ingreso +)
-    if (PARTNERS.includes(tx.partner)) {
-      return false;
-    }
-    // Gastos directos de proveedores cargados fuera de los socios
-    if (tx.provider && tx.provider.trim() !== "" && tx.provider.trim() !== tx.partner) {
-      const c = (tx.concept || "").toLowerCase();
-      if (!c.includes("aporte") && !c.includes("crédito") && !c.includes("credito") && !c.includes("ingreso")) {
-        return true;
-      }
-    }
-    return false;
-  };
-
   // 1. Ordenar cronológicamente ASC (más antiguo primero) para calcular el saldo acumulado real
   const chronological = [...state.transactions].sort((a, b) => {
     const timeA = new Date(a.date).getTime() || 0;
     const timeB = new Date(b.date).getTime() || 0;
     if (timeA !== timeB) return timeA - timeB;
-    return (a._idx ?? 0) - (a._idx ?? 0);
+    return (a._idx ?? 0) - (b._idx ?? 0);
   });
 
   let runningBalanceARS = 0;
   let totalIngresosARS = 0;
   let totalEgresosARS = 0;
 
-  const calculatedItems = chronological.map(tx => {
+  // Generar partidas contables de Libro Diario
+  const ledgerEntries = [];
+
+  chronological.forEach(tx => {
     const amt = parseFloat(tx.amount);
     const rate = parseFloat(tx.rate || 1);
     const rateUsed = rate > 1 ? rate : rateToday;
     const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
 
-    const isPago = isActualPayment(tx);
-    let ingreso = 0;
-    let egreso = 0;
+    const isCreditSource = (tx.partner === "Sociedad (Crédito)");
+    const isPartnerSource = PARTNERS.includes(tx.partner);
 
-    if (isPago) {
-      egreso = arsVal;
-      totalEgresosARS += arsVal;
-      runningBalanceARS -= arsVal;
-    } else {
-      ingreso = arsVal;
-      totalIngresosARS += arsVal;
+    // Caso A: Ingreso de Crédito Bancario a la Sociedad (sin budget_id)
+    if (isCreditSource && !tx.budget_id) {
       runningBalanceARS += arsVal;
+      totalIngresosARS += arsVal;
+      ledgerEntries.push({
+        id: tx.id,
+        date: tx.date,
+        partner: tx.partner,
+        concept: tx.concept || "Ingreso Crédito Sociedad",
+        provider: "",
+        ingreso: arsVal,
+        egreso: 0,
+        runningBalanceARS,
+        type: "ingreso",
+        rawTx: tx
+      });
     }
+    // Caso B: Pago a proveedor con dinero del Crédito (con budget_id)
+    else if (isCreditSource && tx.budget_id) {
+      runningBalanceARS -= arsVal;
+      totalEgresosARS += arsVal;
+      ledgerEntries.push({
+        id: tx.id,
+        date: tx.date,
+        partner: tx.partner,
+        concept: tx.concept,
+        provider: tx.provider,
+        budget_id: tx.budget_id,
+        phase: tx.phase,
+        ingreso: 0,
+        egreso: arsVal,
+        runningBalanceARS,
+        type: "egreso",
+        rawTx: tx
+      });
+    }
+    // Caso C: Aporte de Socio humano (Franco, David, Gabriel, Sandra)
+    else if (isPartnerSource) {
+      // 1. Entrada de Capital del Socio a la Sociedad (+ Ingreso)
+      runningBalanceARS += arsVal;
+      totalIngresosARS += arsVal;
+      ledgerEntries.push({
+        id: `${tx.id}_ingreso`,
+        date: tx.date,
+        partner: tx.partner,
+        concept: `Aporte de Capital de ${tx.partner} (${tx.concept})`,
+        provider: "",
+        ingreso: arsVal,
+        egreso: 0,
+        runningBalanceARS,
+        type: "ingreso",
+        rawTx: tx
+      });
 
-    return {
-      ...tx,
-      isPago,
-      arsVal,
-      ingreso,
-      egreso,
-      runningBalanceARS
-    };
+      // 2. Si el aporte se usó directamente para pagar un gasto/presupuesto (- Egreso a Proveedor)
+      if (tx.budget_id || (tx.provider && tx.provider !== tx.partner)) {
+        runningBalanceARS -= arsVal;
+        totalEgresosARS += arsVal;
+        ledgerEntries.push({
+          id: `${tx.id}_egreso`,
+          date: tx.date,
+          partner: tx.partner,
+          concept: `Pago a Proveedor: ${tx.concept}`,
+          provider: tx.provider,
+          budget_id: tx.budget_id,
+          phase: tx.phase,
+          ingreso: 0,
+          egreso: arsVal,
+          runningBalanceARS,
+          type: "egreso",
+          rawTx: tx
+        });
+      }
+    }
   });
 
   // Actualizar tarjetas KPI globales del resumen
@@ -695,12 +733,12 @@ function renderResumenCuenta() {
   if (saldoElem) saldoElem.textContent = `$ ${formatNumber(Math.round(runningBalanceARS))} ARS`;
 
   // 2. Filtrar y ordenar DESC (más reciente arriba) para mostrar en pantalla
-  const filtered = calculatedItems.filter(tx => {
-    if (filterOrigen && tx.partner !== filterOrigen) return false;
-    if (filterTipo === "ingreso" && !tx.ingreso) return false;
-    if (filterTipo === "egreso" && !tx.egreso) return false;
+  const filtered = ledgerEntries.filter(entry => {
+    if (filterOrigen && entry.partner !== filterOrigen) return false;
+    if (filterTipo === "ingreso" && entry.type !== "ingreso") return false;
+    if (filterTipo === "egreso" && entry.type !== "egreso") return false;
     if (state.searchQuery) {
-      const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.currency} ${tx.amount}`;
+      const searchTarget = `${entry.partner} ${entry.concept} ${entry.provider || ''} ${entry.ingreso} ${entry.egreso}`;
       return matchesSearch(searchTarget, state.searchQuery);
     }
     return true;
@@ -708,7 +746,7 @@ function renderResumenCuenta() {
     const timeA = new Date(a.date).getTime() || 0;
     const timeB = new Date(b.date).getTime() || 0;
     if (timeB !== timeA) return timeB - timeA;
-    return (b._idx ?? 0) - (a._idx ?? 0);
+    return 0;
   });
 
   if (filtered.length === 0) {
@@ -749,8 +787,8 @@ function renderResumenCuenta() {
       <td style="text-align:right">${saldoHtml}</td>
       ${window.AppStorage.isAdmin() ? `
         <td style="text-align:right">
-          <button class="btn btn-secondary btn-small" onclick="editTransaction('${tx.id}')">Editar</button>
-          <button class="btn btn-danger btn-small" onclick="deleteTransaction('${tx.id}')" style="margin-left:4px">X</button>
+          <button class="btn btn-secondary btn-small" onclick="editTransaction('${tx.rawTx ? tx.rawTx.id : tx.id}')">Editar</button>
+          <button class="btn btn-danger btn-small" onclick="deleteTransaction('${tx.rawTx ? tx.rawTx.id : tx.id}')" style="margin-left:4px">X</button>
         </td>
       ` : ""}
     `;
@@ -762,8 +800,8 @@ function renderResumenCuenta() {
     mobileCard.innerHTML = `
       <div class="mobile-tx-header">
         <div>${origenBadge}</div>
-        <span class="mobile-tx-amount" style="color:${tx.isPago ? '#ef4444' : '#10b981'}; font-weight:700;">
-          ${tx.isPago ? '-' : '+'} ${formatCurrency(parseFloat(tx.amount), tx.currency)}
+        <span class="mobile-tx-amount" style="color:${tx.egreso > 0 ? '#ef4444' : '#10b981'}; font-weight:700;">
+          ${tx.egreso > 0 ? '-' : '+'} $ ${formatNumber(Math.round(tx.egreso > 0 ? tx.egreso : tx.ingreso))}
         </span>
       </div>
       <div class="mobile-tx-concept" style="margin-top:6px;">
@@ -776,8 +814,8 @@ function renderResumenCuenta() {
       </div>
       ${window.AppStorage.isAdmin() ? `
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:5px;border-top:1px solid rgba(255,255,255,0.04);padding-top:8px;">
-          <button class="btn btn-secondary btn-small" onclick="editTransaction('${tx.id}')">Editar</button>
-          <button class="btn btn-danger btn-small" onclick="deleteTransaction('${tx.id}')">Borrar</button>
+          <button class="btn btn-secondary btn-small" onclick="editTransaction('${tx.rawTx ? tx.rawTx.id : tx.id}')">Editar</button>
+          <button class="btn btn-danger btn-small" onclick="deleteTransaction('${tx.rawTx ? tx.rawTx.id : tx.id}')">Borrar</button>
         </div>
       ` : ""}
     `;
