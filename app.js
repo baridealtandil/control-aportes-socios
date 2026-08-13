@@ -1158,28 +1158,52 @@ function closeModal(modalId) {
   }
 }
 
+function updateTxUsdHelper() {
+  const currency = document.getElementById("tx-currency").value;
+  const amount = parseFloat(document.getElementById("tx-amount").value) || 0;
+  const rateInput = parseFloat(document.getElementById("tx-rate").value);
+  const rate = rateInput > 1 ? rateInput : (state.dolarBlue.promedio || 1545);
+  const helper = document.getElementById("tx-usd-helper");
+  if (!helper) return;
+
+  if (amount <= 0) {
+    helper.style.display = "none";
+    helper.textContent = "";
+    return;
+  }
+
+  helper.style.display = "block";
+  if (currency === "ARS") {
+    const usdEquiv = (amount / rate).toFixed(1);
+    helper.textContent = `💵 Equivalente de Referencia: USD ${formatNumber(usdEquiv)} (al dólar de $${formatNumber(rate)} ARS de hoy/aporte)`;
+  } else {
+    const arsEquiv = Math.round(amount * rate);
+    helper.textContent = `💵 Equivalente en Pesos: $${formatNumber(arsEquiv)} ARS (al dólar de $${formatNumber(rate)} ARS de hoy/aporte)`;
+  }
+}
+
 function toggleRateVisibility() {
   const currency = document.getElementById("tx-currency").value;
   const rateGroup = document.getElementById("tx-rate-group");
   const rateInput = document.getElementById("tx-rate");
   const rateLabel = document.getElementById("tx-rate-label");
   
-  // Siempre mostrar el campo de cotización (para USD también, para guardar el tipo de cambio histórico)
   rateGroup.classList.remove("hidden");
   
   if (currency === "ARS") {
     rateInput.setAttribute("required", "true");
-    if (rateLabel) rateLabel.textContent = "Cotización USD al momento del aporte (ARS por 1 USD)";
-    if (!rateInput.value || parseFloat(rateInput.value) === 0 || parseFloat(rateInput.value) === 1) {
+    if (rateLabel) rateLabel.textContent = "Cotización Dólar Blue al momento del aporte (ARS por 1 USD)";
+    if (!rateInput.value || parseFloat(rateInput.value) <= 1) {
       rateInput.value = state.dolarBlue.promedio || 1545;
     }
   } else {
     rateInput.setAttribute("required", "true");
-    if (rateLabel) rateLabel.textContent = "Cotización USD al momento del aporte (para calcular equiv. ARS)";
+    if (rateLabel) rateLabel.textContent = "Cotización Dólar Blue al momento del aporte (para calcular equiv. ARS)";
     if (!rateInput.value || parseFloat(rateInput.value) <= 1) {
       rateInput.value = state.dolarBlue.promedio || 1545;
     }
   }
+  updateTxUsdHelper();
 }
 
 // 14. INICIO DE SESIÓN DE ADMINISTRADOR
@@ -1286,7 +1310,12 @@ function formatDate(dateStr) {
 function initEventListeners() {
   // Transacciones
   document.getElementById("tx-form").addEventListener("submit", saveTransaction);
-  document.getElementById("tx-currency").addEventListener("change", toggleRateVisibility);
+  document.getElementById("tx-currency").addEventListener("change", () => {
+    toggleRateVisibility();
+    updateTxUsdHelper();
+  });
+  document.getElementById("tx-amount").addEventListener("input", updateTxUsdHelper);
+  document.getElementById("tx-rate").addEventListener("input", updateTxUsdHelper);
   document.getElementById("tx-budget-id").addEventListener("change", (e) => {
     const budgetId = e.target.value;
     if (budgetId) {
