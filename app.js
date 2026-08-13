@@ -475,10 +475,20 @@ function renderPayments() {
   let paidWithCreditARS = 0;
   let paidWithSociosARS = 0;
 
-  const payments = state.transactions.filter(tx => {
-    const isPayment = Boolean(tx.budget_id || tx.provider || tx.partner === "Sociedad (Crédito)");
-    if (!isPayment) return false;
+  // Helper: Identificar si una transacción es un Pago a Proveedor/Obra (Egreso)
+  const isActualPayment = (tx) => {
+    if (tx.budget_id) return true;
+    if (tx.provider && tx.provider.trim() !== "" && tx.provider.trim() !== tx.partner) {
+      const c = (tx.concept || "").toLowerCase();
+      if (!c.includes("aporte") && !c.includes("crédito") && !c.includes("credito") && !c.includes("ingreso")) {
+        return true;
+      }
+    }
+    return false;
+  };
 
+  const payments = state.transactions.filter(tx => {
+    if (!isActualPayment(tx)) return false;
     if (filterOrigen && tx.partner !== filterOrigen) return false;
 
     if (state.searchQuery) {
@@ -493,8 +503,9 @@ function renderPayments() {
     return (b._idx ?? 0) - (a._idx ?? 0);
   });
 
+  // Sumar únicamente los pagos reales a proveedores
   state.transactions.forEach(tx => {
-    if (tx.budget_id || tx.provider || tx.partner === "Sociedad (Crédito)") {
+    if (isActualPayment(tx)) {
       const amt = parseFloat(tx.amount);
       const rate = parseFloat(tx.rate || 1);
       const rateUsed = rate > 1 ? rate : rateToday;
