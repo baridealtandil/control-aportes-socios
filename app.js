@@ -2175,18 +2175,6 @@ function shareWhatsAppSummary() {
   const partnerArsTotals = {};
   PARTNERS.forEach(p => { partnerArsTotals[p] = 0; });
 
-  const isActualPayment = (tx) => {
-    if (tx.partner === "Sociedad (Crédito)" && (tx.budget_id || tx.provider)) return true;
-    if (PARTNERS.includes(tx.partner)) return false;
-    if (tx.provider && tx.provider.trim() !== "" && tx.provider.trim() !== tx.partner) {
-      const c = (tx.concept || "").toLowerCase();
-      if (!c.includes("aporte") && !c.includes("crédito") && !c.includes("credito") && !c.includes("ingreso")) {
-        return true;
-      }
-    }
-    return false;
-  };
-
   state.transactions.forEach(tx => {
     const amt = parseFloat(tx.amount);
     const rate = parseFloat(tx.rate || 1);
@@ -2205,13 +2193,13 @@ function shareWhatsAppSummary() {
     } else if (tx.partner === "Sociedad (Crédito)") {
       if (tx.budget_id) {
         usedCreditARS += arsVal;
-        totalPaidARS += arsVal;
       } else {
         totalCreditARS += arsVal;
       }
     }
 
-    if (isActualPayment(tx) && tx.partner !== "Sociedad (Crédito)") {
+    // Si tiene budget_id, es un Pago Ejecutado a Obra/Gastos
+    if (tx.budget_id) {
       totalPaidARS += arsVal;
     }
   });
