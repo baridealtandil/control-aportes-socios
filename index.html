@@ -81,6 +81,7 @@
     <div class="tabs-container">
       <button class="tab-btn active" data-tab="tab-inicio">🏠 Inicio</button>
       <button class="tab-btn" data-tab="tab-caja">📦 Caja</button>
+      <button class="tab-btn" data-tab="tab-pagos">💳 Pagos</button>
       <button class="tab-btn" data-tab="tab-socios">👥 Socios</button>
       <button class="tab-btn" data-tab="tab-igualar">⚖️ Para Igualar</button>
       <button class="tab-btn" data-tab="tab-aportes">📜 Aportes</button>
@@ -211,6 +212,81 @@
 
         <div id="caja-empty" style="display:none; text-align:center; color:var(--text-muted); font-size:0.88rem; padding:8px 0;">
           ✅ Todos los aportes están asignados a un gasto
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= TAB: PAGOS A PROVEEDORES Y OBRAS ================= -->
+    <div id="tab-pagos" class="tab-content hidden">
+      <!-- RESUMEN DE PAGOS -->
+      <section class="global-summary-card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(22, 30, 49, 0.7) 100%); border-color: rgba(99, 102, 241, 0.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+            <h2 style="font-size:1.15rem; font-weight:700; color:var(--text-main); margin:0;">Control de Pagos a Proveedores y Obra</h2>
+          </div>
+          <button class="btn" id="btn-add-payment" style="background:var(--success); color:#fff; font-weight:600; padding:8px 16px; font-size:0.85rem; border-radius:10px; display:inline-flex; align-items:center; gap:6px;">
+            💳 + Registrar Nuevo Pago
+          </button>
+        </div>
+
+        <div class="sub-stats-row" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <div class="sub-stat-card">
+            <div class="sub-stat-title">Total Pagado a Proveedores ($ARS)</div>
+            <div class="sub-stat-val text-primary" id="pagos-total-ars" style="color:var(--primary-light);">$ 0</div>
+          </div>
+          <div class="sub-stat-card" style="background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.25);">
+            <div class="sub-stat-title" style="color:#f59e0b;">🏛️ Pagado con Crédito Sociedad</div>
+            <div class="sub-stat-val text-warning" id="pagos-credito-ars">$ 0</div>
+          </div>
+          <div class="sub-stat-card" style="background:rgba(16,185,129,0.08); border-color:rgba(16,185,129,0.25);">
+            <div class="sub-stat-title" style="color:#34d399;">👥 Pagado por Socios / Caja</div>
+            <div class="sub-stat-val text-success" id="pagos-socios-ars">$ 0</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TABLA DE HISTORIAL DE PAGOS -->
+      <section class="history-section">
+        <div class="history-header">
+          <div class="history-title-area">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <h2 style="font-size:1.25rem; font-weight:600;">Historial de Pagos Realizados</h2>
+          </div>
+          <div class="history-filters">
+            <select id="filter-pagos-origen" class="select-input">
+              <option value="">Todos los Orígenes de Pago</option>
+              <option value="Sociedad (Crédito)">🏛️ Crédito Sociedad</option>
+              <option value="Franco">Franco</option>
+              <option value="David">David</option>
+              <option value="Gabriel">Gabriel</option>
+              <option value="Sandra">Sandra</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Origen del Pago</th>
+                <th>Proveedor</th>
+                <th>Concepto / Ítem Pagado</th>
+                <th>Rubro</th>
+                <th>Monto Pagado</th>
+                <th>Equivalente USD</th>
+                <th class="admin-only hidden" style="text-align:right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="pagos-table-body">
+              <!-- Cargado dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mobile-history-list" id="mobile-pagos-list">
+          <!-- Cargado dinámicamente -->
         </div>
       </section>
     </div>

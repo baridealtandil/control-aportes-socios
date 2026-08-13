@@ -198,6 +198,7 @@ function renderAll() {
   renderPartners();
   renderEqualizationTable();
   renderCaja();
+  renderPayments();
   renderTransactions();
   calculateAndRenderBudgetDashboard();
   renderBudgets();
@@ -455,6 +456,143 @@ function matchesSearch(text, query) {
   if (!query) return true;
   if (!text) return false;
   return text.toLowerCase().includes(query.toLowerCase());
+}
+
+// 6b. RENDERIZAR TABLA E HISTORIAL DE PAGOS A PROVEEDORES Y OBRAS
+function renderPayments() {
+  const filterOrigenElem = document.getElementById("filter-pagos-origen");
+  const filterOrigen = filterOrigenElem ? filterOrigenElem.value : "";
+  const tableBody = document.getElementById("pagos-table-body");
+  const mobileList = document.getElementById("mobile-pagos-list");
+  
+  if (!tableBody || !mobileList) return;
+  tableBody.innerHTML = "";
+  mobileList.innerHTML = "";
+
+  const rateToday = state.dolarBlue.promedio || 1545;
+
+  let totalPaidARS = 0;
+  let paidWithCreditARS = 0;
+  let paidWithSociosARS = 0;
+
+  const payments = state.transactions.filter(tx => {
+    const isPayment = Boolean(tx.budget_id || tx.provider || tx.partner === "Sociedad (Crédito)");
+    if (!isPayment) return false;
+
+    if (filterOrigen && tx.partner !== filterOrigen) return false;
+
+    if (state.searchQuery) {
+      const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.currency} ${tx.amount}`;
+      return matchesSearch(searchTarget, state.searchQuery);
+    }
+    return true;
+  }).sort((a, b) => {
+    const timeA = new Date(a.date).getTime() || 0;
+    const timeB = new Date(b.date).getTime() || 0;
+    if (timeB !== timeA) return timeB - timeA;
+    return (b._idx ?? 0) - (a._idx ?? 0);
+  });
+
+  state.transactions.forEach(tx => {
+    if (tx.budget_id || tx.provider || tx.partner === "Sociedad (Crédito)") {
+      const amt = parseFloat(tx.amount);
+      const rate = parseFloat(tx.rate || 1);
+      const rateUsed = rate > 1 ? rate : rateToday;
+      const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
+
+      totalPaidARS += arsVal;
+      if (tx.partner === "Sociedad (Crédito)") {
+        paidWithCreditARS += arsVal;
+      } else {
+        paidWithSociosARS += arsVal;
+      }
+    }
+  });
+
+  const totalElem = document.getElementById("pagos-total-ars");
+  if (totalElem) totalElem.textContent = `$ ${formatNumber(Math.round(totalPaidARS))} ARS`;
+
+  const credElem = document.getElementById("pagos-credito-ars");
+  if (credElem) credElem.textContent = `$ ${formatNumber(Math.round(paidWithCreditARS))} ARS`;
+
+  const sociosElem = document.getElementById("pagos-socios-ars");
+  if (sociosElem) sociosElem.textContent = `$ ${formatNumber(Math.round(paidWithSociosARS))} ARS`;
+
+  if (payments.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:30px;">No se registraron pagos a proveedores todavía.</td></tr>`;
+    mobileList.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:30px 10px;font-size:0.9rem;">No hay pagos registrados.</div>`;
+    return;
+  }
+
+  payments.forEach(tx => {
+    const amount = parseFloat(tx.amount);
+    const rate = parseFloat(tx.rate || 1);
+    const rateUsed = rate > 1 ? rate : rateToday;
+    const dateFormatted = formatDate(tx.date);
+    
+    const associatedBudget = state.budgets.find(b => b.id === tx.budget_id);
+    const budgetConceptHtml = associatedBudget 
+      ? `<br><span style="font-size:0.75rem;color:var(--success-light)">📌 Presupuesto: ${associatedBudget.concept}</span>` 
+      : "";
+
+    const origenBadge = tx.partner === "Sociedad (Crédito)"
+      ? `<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">🏛️ Crédito Sociedad</span>`
+      : `<span style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); color:var(--primary-light); padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">👤 ${tx.partner}</span>`;
+
+    // Fila Desktop
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${dateFormatted}</td>
+      <td>${origenBadge}</td>
+      <td>${tx.provider ? `<strong>${tx.provider}</strong>` : `<span class="text-muted">-</span>`}</td>
+      <td>${tx.concept}${budgetConceptHtml}</td>
+      <td><span class="widget-pill btn-secondary" style="padding:4px 8px;font-size:0.75rem;">${tx.phase ? tx.phase.split(':')[0] : 'Rubro'}</span></td>
+      <td class="cell-amount text-primary" style="font-weight:600">
+        ${formatCurrency(amount, tx.currency)}
+      </td>
+      <td class="cell-amount" style="font-weight:600; color:#34d399">
+        ${tx.currency === "ARS" 
+          ? formatCurrency(amount / rateUsed, "USD")
+          : formatCurrency(amount, "USD")}
+        <div style="font-size:0.7rem;color:var(--text-muted);font-weight:normal;margin-top:2px;">equiv. USD hist.</div>
+      </td>
+      ${window.AppStorage.isAdmin() ? `
+        <td style="text-align:right">
+          <button class="btn btn-secondary btn-small" onclick="editTransaction('${tx.id}')">Editar</button>
+          <button class="btn btn-danger btn-small" onclick="deleteTransaction('${tx.id}')" style="margin-left:4px">X</button>
+        </td>
+      ` : ""}
+    `;
+    tableBody.appendChild(tr);
+
+    // Tarjeta Móvil
+    const mobileCard = document.createElement("div");
+    mobileCard.className = "mobile-tx-card";
+    mobileCard.innerHTML = `
+      <div class="mobile-tx-header">
+        <div>${origenBadge}</div>
+        <span class="mobile-tx-amount currency-${tx.currency.toLowerCase()}">
+          ${formatCurrency(amount, tx.currency)}
+        </span>
+      </div>
+      <div class="mobile-tx-concept" style="margin-top:6px;">
+        <div style="font-weight:600; color:var(--text-main);">${tx.concept}</div>
+        ${tx.provider ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">Proveedor: <strong>${tx.provider}</strong></div>` : ''}
+        ${associatedBudget ? `<div style="font-size:0.75rem;color:var(--success-light);margin-top:2px;">📌 Presupuesto: ${associatedBudget.concept}</div>` : ""}
+      </div>
+      <div class="mobile-tx-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-top:1px solid rgba(255,255,255,0.04); padding-top:8px; font-size:0.8rem; color:var(--text-muted);">
+        <span>Fecha: ${dateFormatted}</span>
+        <span>Equiv: <strong>${tx.currency === 'ARS' ? formatCurrency(amount / rateUsed, "USD") : formatCurrency(amount, "USD")}</strong></span>
+      </div>
+      ${window.AppStorage.isAdmin() ? `
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:5px;border-top:1px solid rgba(255,255,255,0.04);padding-top:8px;">
+          <button class="btn btn-secondary btn-small" onclick="editTransaction('${tx.id}')">Editar</button>
+          <button class="btn btn-danger btn-small" onclick="deleteTransaction('${tx.id}')">Borrar</button>
+        </div>
+      ` : ""}
+    `;
+    mobileList.appendChild(mobileCard);
+  });
 }
 
 // 6. RENDERIZAR TABLA E HISTORIAL DE MOVIMIENTOS
@@ -1395,10 +1533,40 @@ function initEventListeners() {
   // Crear Categorías
   document.getElementById("category-add-form").addEventListener("submit", addCategory);
   
-  // Login
-  document.getElementById("login-form").addEventListener("submit", handleAdminLogin);
-  const loginActionBtn = document.getElementById("login-action-btn");
-  if (loginActionBtn) loginActionBtn.addEventListener("click", handleLoginAction);
+  // Botón Registrar Pago en Pestaña Pagos
+  const btnAddPayment = document.getElementById("btn-add-payment");
+  if (btnAddPayment) {
+    btnAddPayment.addEventListener("click", () => {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById("tx-id").value = "";
+      document.getElementById("tx-date").value = today;
+      document.getElementById("tx-rate").value = state.dolarBlue.promedio || 1545;
+
+      document.getElementById("tx-partners-group-create").classList.remove("hidden");
+      document.getElementById("tx-partners-group-edit").classList.add("hidden");
+      
+      const checkboxes = document.querySelectorAll('input[name="tx-partner-checkbox"]');
+      checkboxes.forEach(cb => {
+        cb.checked = (cb.value === "Sociedad (Crédito)");
+      });
+
+      document.getElementById("tx-concept").value = "";
+      document.getElementById("tx-provider").value = "";
+      document.getElementById("tx-amount").value = "";
+      document.getElementById("tx-currency").value = "ARS";
+
+      toggleRateVisibility();
+      if (typeof updateTxUsdHelper === "function") updateTxUsdHelper();
+
+      document.getElementById("modal-tx-title").textContent = "Registrar Nuevo Pago a Proveedor";
+      openModal("modal-transaction");
+    });
+  }
+
+  const filterPagosOrigen = document.getElementById("filter-pagos-origen");
+  if (filterPagosOrigen) {
+    filterPagosOrigen.addEventListener("change", renderPayments);
+  }
 
   // Activadores de 4 toques para ingresar como Admin
   document.querySelectorAll(".admin-secret-target").forEach(el => {
