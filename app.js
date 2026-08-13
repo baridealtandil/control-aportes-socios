@@ -2167,26 +2167,57 @@ function shareWhatsAppSummary() {
   
   let totalUSD = 0;
   let totalARS = 0;
-  
+  let totalPaidARS = 0;
+  let totalCreditARS = 0;
+  let usedCreditARS = 0;
+  let unassignedPartnersARS = 0;
+
   const partnerArsTotals = {};
   PARTNERS.forEach(p => { partnerArsTotals[p] = 0; });
+
+  const isActualPayment = (tx) => {
+    if (tx.partner === "Sociedad (Crédito)" && (tx.budget_id || tx.provider)) return true;
+    if (PARTNERS.includes(tx.partner)) return false;
+    if (tx.provider && tx.provider.trim() !== "" && tx.provider.trim() !== tx.partner) {
+      const c = (tx.concept || "").toLowerCase();
+      if (!c.includes("aporte") && !c.includes("crédito") && !c.includes("credito") && !c.includes("ingreso")) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   state.transactions.forEach(tx => {
     const amt = parseFloat(tx.amount);
     const rate = parseFloat(tx.rate || 1);
-    if (tx.currency === "USD") {
-      totalUSD += amt;
-      const rateUsed = rate > 1 ? rate : rateToday;
-      const arsEquiv = amt * rateUsed;
-      totalARS += arsEquiv;
-      partnerArsTotals[tx.partner] += arsEquiv;
-    } else {
-      const rateUsed = rate > 1 ? rate : rateToday;
-      totalARS += amt;
-      totalUSD += (amt / rateUsed);
-      partnerArsTotals[tx.partner] += amt;
+    const rateUsed = rate > 1 ? rate : rateToday;
+    const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
+    const usdVal = tx.currency === 'USD' ? amt : (amt / rateUsed);
+
+    totalARS += arsVal;
+    totalUSD += usdVal;
+
+    if (PARTNERS.includes(tx.partner)) {
+      partnerArsTotals[tx.partner] += arsVal;
+      if (!tx.budget_id) {
+        unassignedPartnersARS += arsVal;
+      }
+    } else if (tx.partner === "Sociedad (Crédito)") {
+      if (tx.budget_id) {
+        usedCreditARS += arsVal;
+        totalPaidARS += arsVal;
+      } else {
+        totalCreditARS += arsVal;
+      }
+    }
+
+    if (isActualPayment(tx) && tx.partner !== "Sociedad (Crédito)") {
+      totalPaidARS += arsVal;
     }
   });
+
+  const availableCreditARS = Math.max(totalCreditARS - usedCreditARS, 0);
+  const totalCajaDisponibleARS = unassignedPartnersARS + availableCreditARS;
 
   const dateFormatted = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -2222,6 +2253,9 @@ function shareWhatsAppSummary() {
   text += `───────────────────────\n`;
   text += `📊 *RESUMEN GLOBAL*\n`;
   text += `• Total Recaudado: *$${formatNumber(Math.round(totalARS))}*\n`;
+  text += `• Total Pagos a Obra: *$${formatNumber(Math.round(totalPaidARS))}*\n`;
+  text += `• Saldo Disponible en Caja: *$${formatNumber(Math.round(totalCajaDisponibleARS))}*\n`;
+  text += `  └ _(Crédito Disponible: $${formatNumber(Math.round(availableCreditARS))} | Caja Socios: $${formatNumber(Math.round(unassignedPartnersARS))})_\n`;
   text += `• Acumulado USD Ref.: *USD ${formatNumber(Math.round(totalUSD))}*\n\n`;
   text += `👥 *ESTADO POR SOCIO*\n\n`;
   text += `${partnerLines}`;
