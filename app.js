@@ -198,6 +198,7 @@ function renderAll() {
   renderPartners();
   renderEqualizationTable();
   renderCaja();
+  renderResumenCuenta();
   renderPayments();
   renderTransactions();
   calculateAndRenderBudgetDashboard();
@@ -594,6 +595,171 @@ function renderPayments() {
       <div class="mobile-tx-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-top:1px solid rgba(255,255,255,0.04); padding-top:8px; font-size:0.8rem; color:var(--text-muted);">
         <span>Fecha: ${dateFormatted}</span>
         <span>Equiv: <strong>${tx.currency === 'ARS' ? formatCurrency(amount / rateUsed, "USD") : formatCurrency(amount, "USD")}</strong></span>
+      </div>
+      ${window.AppStorage.isAdmin() ? `
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:5px;border-top:1px solid rgba(255,255,255,0.04);padding-top:8px;">
+          <button class="btn btn-secondary btn-small" onclick="editTransaction('${tx.id}')">Editar</button>
+          <button class="btn btn-danger btn-small" onclick="deleteTransaction('${tx.id}')">Borrar</button>
+        </div>
+      ` : ""}
+    `;
+    mobileList.appendChild(mobileCard);
+  });
+}
+
+// 6c. RENDERIZAR RESUMEN DE CUENTA — LIBRO DIARIO DE CAJA (DEBE, HABER, SALDO)
+function renderResumenCuenta() {
+  const filterOrigenElem = document.getElementById("filter-resumen-origen");
+  const filterOrigen = filterOrigenElem ? filterOrigenElem.value : "";
+  const tableBody = document.getElementById("resumen-table-body");
+  const mobileList = document.getElementById("mobile-resumen-list");
+
+  if (!tableBody || !mobileList) return;
+  tableBody.innerHTML = "";
+  mobileList.innerHTML = "";
+
+  const rateToday = state.dolarBlue.promedio || 1545;
+
+  const isActualPayment = (tx) => {
+    if (tx.budget_id) return true;
+    if (tx.provider && tx.provider.trim() !== "" && tx.provider.trim() !== tx.partner) {
+      const c = (tx.concept || "").toLowerCase();
+      if (!c.includes("aporte") && !c.includes("crédito") && !c.includes("credito") && !c.includes("ingreso")) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // 1. Ordenar cronológicamente ASC (más antiguo primero) para calcular el saldo acumulado real
+  const chronological = [...state.transactions].sort((a, b) => {
+    const timeA = new Date(a.date).getTime() || 0;
+    const timeB = new Date(b.date).getTime() || 0;
+    if (timeA !== timeB) return timeA - timeB;
+    return (a._idx ?? 0) - (b._idx ?? 0);
+  });
+
+  let runningBalanceARS = 0;
+  let totalIngresosARS = 0;
+  let totalEgresosARS = 0;
+
+  const calculatedItems = chronological.map(tx => {
+    const amt = parseFloat(tx.amount);
+    const rate = parseFloat(tx.rate || 1);
+    const rateUsed = rate > 1 ? rate : rateToday;
+    const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
+
+    const isPago = isActualPayment(tx);
+    let ingreso = 0;
+    let egreso = 0;
+
+    if (isPago) {
+      egreso = arsVal;
+      totalEgresosARS += arsVal;
+      runningBalanceARS -= arsVal;
+    } else {
+      ingreso = arsVal;
+      totalIngresosARS += arsVal;
+      runningBalanceARS += arsVal;
+    }
+
+    return {
+      ...tx,
+      isPago,
+      arsVal,
+      ingreso,
+      egreso,
+      runningBalanceARS
+    };
+  });
+
+  // Actualizar tarjetas KPI globales del resumen
+  const totalIngElem = document.getElementById("resumen-total-ingresos");
+  if (totalIngElem) totalIngElem.textContent = `$ ${formatNumber(Math.round(totalIngresosARS))} ARS`;
+
+  const totalEgElem = document.getElementById("resumen-total-egresos");
+  if (totalEgElem) totalEgElem.textContent = `$ ${formatNumber(Math.round(totalEgresosARS))} ARS`;
+
+  const saldoElem = document.getElementById("resumen-saldo-caja");
+  if (saldoElem) saldoElem.textContent = `$ ${formatNumber(Math.round(runningBalanceARS))} ARS`;
+
+  // 2. Filtrar y ordenar DESC (más reciente arriba) para mostrar en pantalla
+  const filtered = calculatedItems.filter(tx => {
+    if (filterOrigen && tx.partner !== filterOrigen) return false;
+    if (state.searchQuery) {
+      const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.currency} ${tx.amount}`;
+      return matchesSearch(searchTarget, state.searchQuery);
+    }
+    return true;
+  }).sort((a, b) => {
+    const timeA = new Date(a.date).getTime() || 0;
+    const timeB = new Date(b.date).getTime() || 0;
+    if (timeB !== timeA) return timeB - timeA;
+    return (b._idx ?? 0) - (a._idx ?? 0);
+  });
+
+  if (filtered.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">No hay movimientos registrados en la cuenta.</td></tr>`;
+    mobileList.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:30px 10px;font-size:0.9rem;">Sin movimientos.</div>`;
+    return;
+  }
+
+  filtered.forEach(tx => {
+    const dateFormatted = formatDate(tx.date);
+    const associatedBudget = state.budgets.find(b => b.id === tx.budget_id);
+    const budgetConceptHtml = associatedBudget 
+      ? `<br><span style="font-size:0.75rem;color:var(--success-light)">📌 Presupuesto: ${associatedBudget.concept}</span>` 
+      : "";
+
+    const origenBadge = tx.partner === "Sociedad (Crédito)"
+      ? `<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">🏛️ Crédito Sociedad</span>`
+      : `<span style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); color:var(--primary-light); padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">👤 ${tx.partner}</span>`;
+
+    const ingresoHtml = tx.ingreso > 0
+      ? `<span style="color:#10b981; font-weight:700;">+ $ ${formatNumber(Math.round(tx.ingreso))}</span>`
+      : `<span style="color:var(--text-muted);">-</span>`;
+
+    const egresoHtml = tx.egreso > 0
+      ? `<span style="color:#ef4444; font-weight:700;">- $ ${formatNumber(Math.round(tx.egreso))}</span>`
+      : `<span style="color:var(--text-muted);">-</span>`;
+
+    const saldoHtml = `<span style="color:var(--primary-light); font-weight:700;">$ ${formatNumber(Math.round(tx.runningBalanceARS))}</span>`;
+
+    // Fila Desktop
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${dateFormatted}</td>
+      <td>${origenBadge}</td>
+      <td>${tx.concept}${tx.provider ? ` (Prov: <strong>${tx.provider}</strong>)` : ''}${budgetConceptHtml}</td>
+      <td style="text-align:right">${ingresoHtml}</td>
+      <td style="text-align:right">${egresoHtml}</td>
+      <td style="text-align:right">${saldoHtml}</td>
+      ${window.AppStorage.isAdmin() ? `
+        <td style="text-align:right">
+          <button class="btn btn-secondary btn-small" onclick="editTransaction('${tx.id}')">Editar</button>
+          <button class="btn btn-danger btn-small" onclick="deleteTransaction('${tx.id}')" style="margin-left:4px">X</button>
+        </td>
+      ` : ""}
+    `;
+    tableBody.appendChild(tr);
+
+    // Tarjeta Móvil
+    const mobileCard = document.createElement("div");
+    mobileCard.className = "mobile-tx-card";
+    mobileCard.innerHTML = `
+      <div class="mobile-tx-header">
+        <div>${origenBadge}</div>
+        <span class="mobile-tx-amount" style="color:${tx.isPago ? '#ef4444' : '#10b981'}; font-weight:700;">
+          ${tx.isPago ? '-' : '+'} ${formatCurrency(parseFloat(tx.amount), tx.currency)}
+        </span>
+      </div>
+      <div class="mobile-tx-concept" style="margin-top:6px;">
+        <div style="font-weight:600; color:var(--text-main);">${tx.concept}</div>
+        ${tx.provider ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">Proveedor: <strong>${tx.provider}</strong></div>` : ''}
+      </div>
+      <div class="mobile-tx-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-top:1px solid rgba(255,255,255,0.04); padding-top:8px; font-size:0.8rem; color:var(--text-muted);">
+        <span>Fecha: ${dateFormatted}</span>
+        <span>Saldo en Caja: <strong style="color:var(--primary-light);">$ ${formatNumber(Math.round(tx.runningBalanceARS))}</strong></span>
       </div>
       ${window.AppStorage.isAdmin() ? `
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:5px;border-top:1px solid rgba(255,255,255,0.04);padding-top:8px;">
@@ -1577,6 +1743,11 @@ function initEventListeners() {
   const filterPagosOrigen = document.getElementById("filter-pagos-origen");
   if (filterPagosOrigen) {
     filterPagosOrigen.addEventListener("change", renderPayments);
+  }
+
+  const filterResumenOrigen = document.getElementById("filter-resumen-origen");
+  if (filterResumenOrigen) {
+    filterResumenOrigen.addEventListener("change", renderResumenCuenta);
   }
 
   // Activadores de 4 toques para ingresar como Admin
