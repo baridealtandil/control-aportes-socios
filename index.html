@@ -253,6 +253,11 @@
             <h2 style="font-size:1.25rem; font-weight:600;">Estado de Cuenta Conciliado</h2>
           </div>
           <div class="history-filters">
+            <select id="filter-resumen-tipo" class="select-input">
+              <option value="">Todos los Movimientos (Ingresos y Pagos)</option>
+              <option value="ingreso">🟢 Solo Ingresos / Haber (+)</option>
+              <option value="egreso">🔴 Solo Pagos / Debe (-)</option>
+            </select>
             <select id="filter-resumen-origen" class="select-input">
               <option value="">Todos los Orígenes / Socios</option>
               <option value="Franco">Franco</option>

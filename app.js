@@ -609,6 +609,8 @@ function renderPayments() {
 
 // 6c. RENDERIZAR RESUMEN DE CUENTA — LIBRO DIARIO DE CAJA (DEBE, HABER, SALDO)
 function renderResumenCuenta() {
+  const filterTipoElem = document.getElementById("filter-resumen-tipo");
+  const filterTipo = filterTipoElem ? filterTipoElem.value : "";
   const filterOrigenElem = document.getElementById("filter-resumen-origen");
   const filterOrigen = filterOrigenElem ? filterOrigenElem.value : "";
   const tableBody = document.getElementById("resumen-table-body");
@@ -620,8 +622,17 @@ function renderResumenCuenta() {
 
   const rateToday = state.dolarBlue.promedio || 1545;
 
+  // Helper: Identificar si una transacción es un Pago a Proveedor/Obra (Egreso -) o un Aporte/Ingreso (+)
   const isActualPayment = (tx) => {
-    if (tx.budget_id) return true;
+    // Si proviene de Sociedad (Crédito) y tiene presupuesto o proveedor, es un PAGO DE OBRA (Egreso -)
+    if (tx.partner === "Sociedad (Crédito)" && (tx.budget_id || tx.provider)) {
+      return true;
+    }
+    // Si el origen es un socio humano (Franco, David, Gabriel, Sandra), es un APORTE DE CAPITAL (Ingreso +)
+    if (PARTNERS.includes(tx.partner)) {
+      return false;
+    }
+    // Gastos directos de proveedores cargados fuera de los socios
     if (tx.provider && tx.provider.trim() !== "" && tx.provider.trim() !== tx.partner) {
       const c = (tx.concept || "").toLowerCase();
       if (!c.includes("aporte") && !c.includes("crédito") && !c.includes("credito") && !c.includes("ingreso")) {
@@ -636,7 +647,7 @@ function renderResumenCuenta() {
     const timeA = new Date(a.date).getTime() || 0;
     const timeB = new Date(b.date).getTime() || 0;
     if (timeA !== timeB) return timeA - timeB;
-    return (a._idx ?? 0) - (b._idx ?? 0);
+    return (a._idx ?? 0) - (a._idx ?? 0);
   });
 
   let runningBalanceARS = 0;
@@ -686,6 +697,8 @@ function renderResumenCuenta() {
   // 2. Filtrar y ordenar DESC (más reciente arriba) para mostrar en pantalla
   const filtered = calculatedItems.filter(tx => {
     if (filterOrigen && tx.partner !== filterOrigen) return false;
+    if (filterTipo === "ingreso" && !tx.ingreso) return false;
+    if (filterTipo === "egreso" && !tx.egreso) return false;
     if (state.searchQuery) {
       const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.currency} ${tx.amount}`;
       return matchesSearch(searchTarget, state.searchQuery);
@@ -1748,6 +1761,11 @@ function initEventListeners() {
   const filterResumenOrigen = document.getElementById("filter-resumen-origen");
   if (filterResumenOrigen) {
     filterResumenOrigen.addEventListener("change", renderResumenCuenta);
+  }
+
+  const filterResumenTipo = document.getElementById("filter-resumen-tipo");
+  if (filterResumenTipo) {
+    filterResumenTipo.addEventListener("change", renderResumenCuenta);
   }
 
   // Activadores de 4 toques para ingresar como Admin
