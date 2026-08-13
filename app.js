@@ -1769,9 +1769,10 @@ function renderCaja() {
       const rateUsed = rate > 1 ? rate : rateToday;
       const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
 
-      totalCreditARS += arsVal;
       if (tx.budget_id) {
         usedCreditARS += arsVal;
+      } else {
+        totalCreditARS += arsVal;
       }
     }
   });
