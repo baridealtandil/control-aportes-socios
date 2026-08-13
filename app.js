@@ -1471,12 +1471,12 @@ function initEventListeners() {
   });
 }
 
-// 17b. CAJA — FONDOS SIN ASIGNAR A NINGÚN GASTO
+// 17b. CAJA — FONDOS SIN ASIGNAR Y CRÉDITO DE LA SOCIEDAD
 function renderCaja() {
   const rateToday = state.dolarBlue.promedio || 1545;
 
-  // Filtrar aportes SIN budget_id (no asignados a ningún gasto)
-  const unassigned = state.transactions.filter(tx => !tx.budget_id);
+  // 1. Filtrar aportes de SOCIOS SIN budget_id (no asignados a ningún gasto)
+  const unassigned = state.transactions.filter(tx => !tx.budget_id && tx.partner !== "Sociedad (Crédito)");
 
   // Totales por moneda
   let cajaUSD = 0;
@@ -1499,12 +1499,42 @@ function renderCaja() {
     }
   });
 
+  // 2. Fondo Crédito / Préstamo Sociedad
+  let totalCreditARS = 0;
+  let usedCreditARS = 0;
+
+  state.transactions.forEach(tx => {
+    if (tx.partner === "Sociedad (Crédito)") {
+      const amt = parseFloat(tx.amount);
+      const rate = parseFloat(tx.rate || 1);
+      const rateUsed = rate > 1 ? rate : rateToday;
+      const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
+
+      totalCreditARS += arsVal;
+      if (tx.budget_id) {
+        usedCreditARS += arsVal;
+      }
+    }
+  });
+
+  const availableCreditARS = Math.max(totalCreditARS - usedCreditARS, 0);
+
+  // Actualizar tarjeta de Crédito Sociedad
+  const credTotalElem = document.getElementById('caja-credito-total');
+  if (credTotalElem) credTotalElem.textContent = `$ ${formatNumber(Math.round(totalCreditARS))} ARS`;
+
+  const credUsedElem = document.getElementById('caja-credito-used');
+  if (credUsedElem) credUsedElem.textContent = `$ ${formatNumber(Math.round(usedCreditARS))} ARS`;
+
+  const credAvailElem = document.getElementById('caja-credito-available');
+  if (credAvailElem) credAvailElem.textContent = `$ ${formatNumber(Math.round(availableCreditARS))} ARS`;
+
   const hasAnything = cajaUSD > 0 || cajaARS > 0;
   const usdInARS = cajaUSD * rateToday;
   const arsInUSD = cajaARS / rateToday;
   const totalEquivARS = usdInARS + cajaARS;
 
-  // Actualizar totales
+  // Actualizar totales de Caja Socios
   document.getElementById('caja-usd-total').textContent =
     `USD ${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(cajaUSD)}`;
   document.getElementById('caja-ars-total').textContent =
@@ -1523,7 +1553,7 @@ function renderCaja() {
     : '';
 
   // Mostrar / ocultar secciones
-  document.getElementById('caja-empty').style.display = hasAnything ? 'none' : 'block';
+  document.getElementById('caja-empty').style.display = (hasAnything || totalCreditARS > 0) ? 'none' : 'block';
   document.getElementById('caja-detalle').style.display = hasAnything && Object.keys(byPartner).length > 0 ? 'block' : 'none';
 
   // Renderizar chips por socio
@@ -1541,7 +1571,7 @@ function renderCaja() {
 
   // Colorear la sección según estado
   const section = document.getElementById('caja-section');
-  if (!hasAnything) {
+  if (!hasAnything && totalCreditARS === 0) {
     section.style.borderColor = 'rgba(255,255,255,0.06)';
     section.style.background = 'rgba(13,17,23,0.3)';
   } else {

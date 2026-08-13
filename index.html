@@ -185,6 +185,30 @@
           </div>
         </div>
 
+        <!-- Fondo Crédito / Préstamo Sociedad -->
+        <div id="caja-credito-card" style="margin-top: 16px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 14px; padding: 16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+            <div style="font-size:0.95rem; font-weight:700; color:#f59e0b; display:flex; align-items:center; gap:6px;">
+              🏛️ Fondo Crédito / Préstamo Sociedad
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-muted); background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); padding:2px 10px; border-radius:12px;">Financiación Externa</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:8px;">
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Ingresado Crédito</div>
+              <div id="caja-credito-total" style="font-size:1.1rem; font-weight:700; color:var(--text-main); font-family:'Outfit',sans-serif;">$ 0 ARS</div>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Usado en Obra</div>
+              <div id="caja-credito-used" style="font-size:1.1rem; font-weight:700; color:var(--warning); font-family:'Outfit',sans-serif;">$ 0 ARS</div>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Disponible Crédito</div>
+              <div id="caja-credito-available" style="font-size:1.1rem; font-weight:700; color:var(--success); font-family:'Outfit',sans-serif;">$ 0 ARS</div>
+            </div>
+          </div>
+        </div>
+
         <div id="caja-empty" style="display:none; text-align:center; color:var(--text-muted); font-size:0.88rem; padding:8px 0;">
           ✅ Todos los aportes están asignados a un gasto
         </div>
@@ -246,11 +270,12 @@
           
           <div class="history-filters">
             <select id="filter-socio" class="select-input">
-              <option value="">Todos los Socios</option>
+              <option value="">Todos los Socios y Fondos</option>
               <option value="Franco">Franco</option>
               <option value="David">David</option>
               <option value="Gabriel">Gabriel</option>
               <option value="Sandra">Sandra</option>
+              <option value="Sociedad (Crédito)">🏛️ Sociedad (Crédito)</option>
             </select>
             <select id="filter-moneda" class="select-input">
               <option value="">Todas las Monedas</option>
@@ -506,6 +531,9 @@
               </label>
               <label style="display:flex; align-items:center; gap:6px; font-size:0.95rem; cursor:pointer;">
                 <input type="checkbox" name="tx-partner-checkbox" value="Sandra" style="width:18px; height:18px; accent-color:var(--primary);"> Sandra
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:0.88rem; cursor:pointer; background:rgba(99,102,241,0.12); padding:3px 10px; border-radius:12px; border:1px solid rgba(99,102,241,0.3); font-weight:600; color:var(--primary-light);">
+                <input type="checkbox" name="tx-partner-checkbox" value="Sociedad (Crédito)" style="width:18px; height:18px; accent-color:var(--primary);"> 🏛️ Sociedad (Crédito)
               </label>
             </div>
             <span class="form-helper" style="margin-top: 5px;">Puedes marcar varios socios para registrar el mismo aporte para cada uno de ellos.</span>
