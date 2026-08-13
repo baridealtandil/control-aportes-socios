@@ -749,12 +749,13 @@ function renderBudgets() {
           <div class="progress-bar-fill" style="width: ${progressPercent}%; background: ${remainingOriginal <= 0 ? 'var(--success)' : 'var(--primary)'}"></div>
         </div>
       </td>
-      ${window.AppStorage.isAdmin() ? `
-        <td style="text-align:right">
-          <button class="btn btn-secondary btn-small" onclick="editBudget('${b.id}')">Editar</button>
+      <td style="text-align:right">
+        <button class="btn btn-small" onclick="payBudgetItem('${b.id}')" style="background:var(--success); color:#fff; font-size:0.75rem; padding:4px 8px; font-weight:600;" title="Registrar Pago a Proveedor con Crédito o Aporte">💳 Cargar Pago</button>
+        ${window.AppStorage.isAdmin() ? `
+          <button class="btn btn-secondary btn-small" onclick="editBudget('${b.id}')" style="margin-left:4px">Editar</button>
           <button class="btn btn-danger btn-small" onclick="deleteBudget('${b.id}')" style="margin-left:4px">X</button>
-        </td>
-      ` : ""}
+        ` : ""}
+      </td>
     `;
     tableBody.appendChild(tr);
 
@@ -776,8 +777,9 @@ function renderBudgets() {
           ${badgeHtml}
         </div>
       </div>
-      <div class="mobile-tx-footer">
+      <div class="mobile-tx-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-top:1px solid rgba(255,255,255,0.04); padding-top:8px;">
         <span>Fecha: ${dateFormatted}</span>
+        <button class="btn btn-small" onclick="payBudgetItem('${b.id}')" style="background:var(--success); color:#fff; font-size:0.75rem; padding:4px 10px; font-weight:600;">💳 Cargar Pago</button>
       </div>
       ${window.AppStorage.isAdmin() ? `
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:5px;border-top:1px solid rgba(255,255,255,0.04);padding-top:8px;">
@@ -1033,6 +1035,55 @@ window.editTransaction = function(id) {
   toggleRateVisibility();
 
   document.getElementById("modal-tx-title").textContent = "Editar Aporte";
+  openModal("modal-transaction");
+};
+
+// Cargar pago directo a un proveedor / ítem presupuestado
+window.payBudgetItem = function(id) {
+  const b = state.budgets.find(item => item.id === id);
+  if (!b) return;
+
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById("tx-id").value = "";
+  document.getElementById("tx-date").value = today;
+  document.getElementById("tx-rate").value = state.dolarBlue.promedio || 1545;
+
+  document.getElementById("tx-partners-group-create").classList.remove("hidden");
+  document.getElementById("tx-partners-group-edit").classList.add("hidden");
+  
+  const checkboxes = document.querySelectorAll('input[name="tx-partner-checkbox"]');
+  checkboxes.forEach(cb => {
+    cb.checked = (cb.value === "Sociedad (Crédito)");
+  });
+
+  document.getElementById("tx-budget-id").value = b.id;
+  document.getElementById("tx-concept").value = b.concept;
+  document.getElementById("tx-provider").value = b.provider || "";
+  document.getElementById("tx-phase").value = b.phase || "";
+  document.getElementById("tx-currency").value = b.currency || "ARS";
+  
+  const rateToday = state.dolarBlue.promedio || 1545;
+  let spent = 0;
+  state.transactions.forEach(tx => {
+    if (tx.budget_id === b.id) {
+      const amt = parseFloat(tx.amount);
+      const rate = parseFloat(tx.rate || 1);
+      const rateUsed = rate > 1 ? rate : rateToday;
+      if (b.currency === "USD") {
+        spent += (tx.currency === "USD" ? amt : amt / rateUsed);
+      } else {
+        spent += (tx.currency === "ARS" ? amt : amt * rateUsed);
+      }
+    }
+  });
+
+  const remaining = Math.max(parseFloat(b.amount) - spent, 0);
+  document.getElementById("tx-amount").value = remaining > 0 ? Math.round(remaining) : "";
+
+  toggleRateVisibility();
+  if (typeof updateTxUsdHelper === "function") updateTxUsdHelper();
+
+  document.getElementById("modal-tx-title").textContent = `Registrar Pago: ${b.concept}`;
   openModal("modal-transaction");
 };
 
