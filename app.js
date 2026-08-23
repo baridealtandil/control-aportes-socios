@@ -1642,7 +1642,7 @@ function handleLoginAction() {
   if (window.AppStorage.isAdmin()) {
     window.AppStorage.logout();
     renderAll();
-    alert("Cerraste sesión de administrador.");
+    if (typeof showToast === "function") showToast("Sesión de administrador cerrada");
   } else {
     document.getElementById("login-pin").value = "";
     openModal("modal-login");
@@ -1830,6 +1830,11 @@ function initEventListeners() {
     document.getElementById("cfg-new-pin").value = "";
     openModal("modal-pin-config");
   });
+
+  const loginActionBtn = document.getElementById("login-action-btn");
+  if (loginActionBtn) {
+    loginActionBtn.addEventListener("click", handleLoginAction);
+  }
 
   document.getElementById("btn-category-settings").addEventListener("click", () => {
     openModal("modal-categories");
