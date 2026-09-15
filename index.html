@@ -200,9 +200,12 @@
               <div style="font-size:0.75rem; color:var(--text-muted);">Ingresado Crédito</div>
               <div id="caja-credito-total" style="font-size:1.1rem; font-weight:700; color:var(--text-main); font-family:'Outfit',sans-serif;">$ 0 ARS</div>
             </div>
-            <div>
-              <div style="font-size:0.75rem; color:var(--text-muted);">Usado en Obra</div>
-              <div id="caja-credito-used" style="font-size:1.1rem; font-weight:700; color:var(--warning); font-family:'Outfit',sans-serif;">$ 0 ARS</div>
+            <div id="caja-credito-used-box" style="cursor:pointer; padding:4px 8px; border-radius:8px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.2); transition:all 0.2s; -webkit-tap-highlight-color:transparent;" title="Haz clic para ver las salidas de dinero gastadas con el Crédito">
+              <div style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                <span>Usado en Obra</span>
+                <span style="font-size:0.68rem; background:rgba(245,158,11,0.25); color:#f59e0b; padding:1px 5px; border-radius:6px; font-weight:600;">🔍 Ver Salidas</span>
+              </div>
+              <div id="caja-credito-used" style="font-size:1.1rem; font-weight:700; color:var(--warning); font-family:'Outfit',sans-serif; text-decoration:underline; text-underline-offset:3px;">$ 0 ARS</div>
             </div>
             <div>
               <div style="font-size:0.75rem; color:var(--text-muted);">Disponible Crédito</div>
@@ -966,6 +969,32 @@
           <button class="btn" type="submit">Guardar Tarea</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: MOVIMIENTOS DE SALIDA DEL CRÉDITO DE LA SOCIEDAD -->
+  <div class="modal-overlay" id="modal-credito-history">
+    <div class="modal-container" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:#f59e0b; display:flex; align-items:center; gap:8px;">
+          🏛️ Salidas de Dinero del Crédito
+        </h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-credito-summary" style="margin-bottom:15px; padding:14px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:12px; font-size:0.9rem;">
+          <!-- Resumen de Crédito Usado / Disponible -->
+        </div>
+        <div id="modal-credito-tx-list" style="display:flex; flex-direction:column; gap:10px; max-height:360px; overflow-y:auto; padding-right:4px;">
+          <!-- Lista de salidas abonadas con crédito -->
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button class="btn btn-secondary" type="button" id="btn-goto-pagos-credito" style="font-size:0.82rem;">
+          💳 Ver en Pestaña Pagos
+        </button>
+        <button class="btn btn-secondary modal-close" type="button">Cerrar</button>
+      </div>
     </div>
   </div>
 

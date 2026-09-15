@@ -452,6 +452,97 @@ function showPartnerHistory(partnerName) {
   openModal("modal-partner-history");
 }
 
+// Abrir modal con el desglose de salidas del dinero del Crédito de la Sociedad
+function openCreditOutputsModal() {
+  const modalSummary = document.getElementById("modal-credito-summary");
+  const modalList = document.getElementById("modal-credito-tx-list");
+  
+  if (!modalSummary || !modalList) return;
+  modalList.innerHTML = "";
+
+  const rateToday = state.dolarBlue.promedio || 1545;
+
+  let totalCreditARS = 0;
+  let usedCreditARS = 0;
+
+  state.transactions.forEach(tx => {
+    if (tx.partner === "Sociedad (Crédito)") {
+      const amt = parseFloat(tx.amount);
+      const rate = parseFloat(tx.rate || 1);
+      const rateUsed = rate > 1 ? rate : rateToday;
+      const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
+
+      if (tx.budget_id) {
+        usedCreditARS += arsVal;
+      } else {
+        totalCreditARS += arsVal;
+      }
+    }
+  });
+
+  const availableCreditARS = Math.max(totalCreditARS - usedCreditARS, 0);
+
+  modalSummary.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <div style="font-size:0.75rem; color:var(--text-muted);">Crédito Ingresado</div>
+        <strong style="color:var(--text-main); font-size:1.02rem;">$ ${formatNumber(Math.round(totalCreditARS))} ARS</strong>
+      </div>
+      <div>
+        <div style="font-size:0.75rem; color:var(--text-muted);">Total Usado en Obra</div>
+        <strong style="color:var(--warning); font-size:1.02rem;">$ ${formatNumber(Math.round(usedCreditARS))} ARS</strong>
+      </div>
+      <div>
+        <div style="font-size:0.75rem; color:var(--text-muted);">Disponible Actual</div>
+        <strong style="color:var(--success); font-size:1.02rem;">$ ${formatNumber(Math.round(availableCreditARS))} ARS</strong>
+      </div>
+    </div>
+  `;
+
+  // Filtrar las salidas pagadas con dinero del Crédito
+  const creditOutputs = state.transactions
+    .filter(tx => tx.partner === "Sociedad (Crédito)" && tx.budget_id)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (creditOutputs.length === 0) {
+    modalList.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:30px 10px; font-size:0.9rem;">Aún no se registraron salidas de dinero del crédito.</div>`;
+  } else {
+    creditOutputs.forEach(tx => {
+      const dateFormatted = formatDate(tx.date);
+      const amt = parseFloat(tx.amount);
+      const rate = parseFloat(tx.rate || 1);
+      const rateUsed = rate > 1 ? rate : rateToday;
+      const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
+      const associatedBudget = state.budgets.find(b => b.id === tx.budget_id);
+
+      const card = document.createElement("div");
+      card.style.cssText = "background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); border-radius:10px; padding:12px; font-size:0.85rem;";
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="color:var(--text-muted); font-size:0.8rem; font-weight:500;">📅 ${dateFormatted}</span>
+          <strong style="font-size:0.95rem; color:#ef4444;">
+            - $ ${formatNumber(Math.round(arsVal))} ARS
+          </strong>
+        </div>
+        <div style="font-weight:600; color:var(--text-main); margin-bottom:2px;">${tx.concept}</div>
+        <div style="font-size:0.78rem; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px; margin-top:4px;">
+          <span>${tx.provider ? `Proveedor: <strong>${tx.provider}</strong>` : ''}</span>
+          <span>${associatedBudget ? `📌 Rubro: <strong>${associatedBudget.concept}</strong>` : ''}</span>
+        </div>
+        ${window.AppStorage.isAdmin() ? `
+          <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:8px; border-top:1px solid rgba(255,255,255,0.05); padding-top:6px;">
+            <button class="btn btn-secondary btn-small" onclick="closeModal('modal-credito-history'); editTransaction('${tx.id}')">Editar</button>
+            <button class="btn btn-danger btn-small" onclick="closeModal('modal-credito-history'); deleteTransaction('${tx.id}')">Borrar</button>
+          </div>
+        ` : ''}
+      `;
+      modalList.appendChild(card);
+    });
+  }
+
+  openModal("modal-credito-history");
+}
+
 // Helper para buscador global
 function matchesSearch(text, query) {
   if (!query) return true;
@@ -1723,7 +1814,34 @@ function formatDate(dateStr) {
   return date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-// 16. REGISTRAR LOS LISTENERS DE EVENTOS
+// Helper para cambiar entre pestañas programáticamente
+function switchTab(tabId) {
+  const tabButtons = document.querySelectorAll(".tab-btn");
+  tabButtons.forEach(b => {
+    if (b.getAttribute("data-tab") === tabId) {
+      b.classList.add("active");
+    } else {
+      b.classList.remove("active");
+    }
+  });
+
+  state.activeTab = tabId;
+
+  document.querySelectorAll(".tab-content").forEach(content => {
+    content.classList.add("hidden");
+  });
+
+  const target = document.getElementById(tabId);
+  if (target) target.classList.remove("hidden");
+
+  if (tabId === "tab-graficos") {
+    renderCharts();
+  }
+
+  toggleTabButtons();
+}
+
+// 15. INICIALIZAR LISTENERS Y EVENTOS DE LA APLICACIÓN
 function initEventListeners() {
   // Transacciones
   document.getElementById("tx-form").addEventListener("submit", saveTransaction);
@@ -1886,30 +2004,30 @@ function initEventListeners() {
   document.getElementById("filter-fase").addEventListener("change", renderTransactions);
   document.getElementById("filter-budget-fase").addEventListener("change", renderBudgets);
 
+  // Clic en la tarjeta "Usado en Obra" del Crédito para ver sus salidas
+  const creditUsedBox = document.getElementById("caja-credito-used-box");
+  if (creditUsedBox) {
+    creditUsedBox.addEventListener("click", openCreditOutputsModal);
+  }
+
+  // Botón dentro del modal para ir directo a la pestaña de Pagos filtrando por Crédito
+  const btnGotoPagosCredito = document.getElementById("btn-goto-pagos-credito");
+  if (btnGotoPagosCredito) {
+    btnGotoPagosCredito.addEventListener("click", () => {
+      closeModal("modal-credito-history");
+      const filterPagosOrigen = document.getElementById("filter-pagos-origen");
+      if (filterPagosOrigen) filterPagosOrigen.value = "Sociedad (Crédito)";
+      switchTab("tab-pagos");
+      renderPayments();
+    });
+  }
+
   // Navegación de pestañas (Tabs)
   const tabButtons = document.querySelectorAll(".tab-btn");
   tabButtons.forEach(btn => {
     btn.addEventListener("click", () => {
-      // Toggle clase activa en los botones
-      tabButtons.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      // Mostrar/Ocultar contenido
       const tabId = btn.getAttribute("data-tab");
-      state.activeTab = tabId;
-      
-      document.querySelectorAll(".tab-content").forEach(content => {
-        content.classList.add("hidden");
-      });
-      document.getElementById(tabId).classList.remove("hidden");
-
-      // Si se abre la pestaña de gráficos, renderizar / actualizar gráficos
-      if (tabId === "tab-graficos") {
-        renderCharts();
-      }
-
-      // Actualizar visibilidad de botones sticky
-      toggleTabButtons();
+      switchTab(tabId);
     });
   });
 
