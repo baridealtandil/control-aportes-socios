@@ -2110,6 +2110,7 @@ function renderCaja() {
 
   // 2. Fondo Crédito / Préstamo Sociedad
   let totalCreditARS = 0;
+  let totalCreditUSD = 0;
   let usedCreditARS = 0;
 
   state.transactions.forEach(tx => {
@@ -2118,11 +2119,13 @@ function renderCaja() {
       const rate = parseFloat(tx.rate || 1);
       const rateUsed = rate > 1 ? rate : rateToday;
       const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
+      const usdVal = tx.currency === 'USD' ? amt : (rateUsed > 1 ? amt / rateUsed : amt / rateToday);
 
       if (tx.budget_id) {
         usedCreditARS += arsVal;
       } else {
         totalCreditARS += arsVal;
+        totalCreditUSD += usdVal;
       }
     }
   });
@@ -2132,6 +2135,11 @@ function renderCaja() {
   // Actualizar tarjeta de Crédito Sociedad
   const credTotalElem = document.getElementById('caja-credito-total');
   if (credTotalElem) credTotalElem.textContent = `$ ${formatNumber(Math.round(totalCreditARS))} ARS`;
+
+  const credTotalUsdElem = document.getElementById('caja-credito-total-usd');
+  if (credTotalUsdElem) {
+    credTotalUsdElem.textContent = `(equiv. usd ${formatNumber(Math.round(totalCreditUSD))})`;
+  }
 
   const credUsedElem = document.getElementById('caja-credito-used');
   if (credUsedElem) credUsedElem.textContent = `$ ${formatNumber(Math.round(usedCreditARS))} ARS`;
