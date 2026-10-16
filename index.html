@@ -726,16 +726,24 @@
           </div>
 
           <div class="form-group">
-            <label for="tx-budget-id">Asociar a Ítem Presupuestado (Opcional)</label>
+            <label for="tx-is-expense">Tipo de Movimiento</label>
+            <select id="tx-is-expense" class="select-input" style="width: 100%">
+              <option value="true">💸 Gasto / Pago a Proveedor (Obra, compras, servicios, etc.)</option>
+              <option value="false">💰 Ingreso de Fondos a Caja (Aporte o Crédito sin gastar aún)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="tx-budget-id">Asociar a Ítem Presupuestado (Opcional — puedes dejarlo libre)</label>
             <select id="tx-budget-id" class="select-input" style="width: 100%">
-              <option value="">Ninguno / Aporte de Capital General</option>
+              <option value="">Sin presupuesto predefinido (Gasto Libre)</option>
               <!-- Cargado dinámicamente -->
             </select>
           </div>
 
           <div class="form-group">
             <label for="tx-concept">Concepto / Detalle del Gasto</label>
-            <input type="text" id="tx-concept" class="text-input" style="width: 100%" placeholder="Ej: Compra de cemento, vajilla, etc." required list="concept-suggestions">
+            <input type="text" id="tx-concept" class="text-input" style="width: 100%" placeholder="Escribe libremente el concepto del gasto..." required list="concept-suggestions">
             <datalist id="concept-suggestions">
               <option value="Aporte de Capital Inicial">
               <option value="Seña Alquiler de Local">
@@ -754,27 +762,31 @@
           </div>
 
           <div class="form-group">
-            <label for="tx-provider">Proveedor</label>
-            <input type="text" id="tx-provider" class="text-input" style="width: 100%" placeholder="Ej: Fudo, Mercado Libre, Pinturería Tandil" list="provider-suggestions">
+            <label for="tx-provider">Proveedor (Puedes escribir cualquiera)</label>
+            <input type="text" id="tx-provider" class="text-input" style="width: 100%" placeholder="Escribe cualquier proveedor libremente..." list="provider-suggestions">
             <!-- Datalist provider-suggestions será rellenada dinámicamente -->
           </div>
 
           <div class="form-group">
-            <label for="tx-phase">Rubro / Categoría del Gasto</label>
-            <select id="tx-phase" class="select-input" style="width: 100%" required>
-              <!-- Cargado dinámicamente -->
-            </select>
+            <label for="tx-phase">Rubro / Categoría (Puedes escribir cualquiera)</label>
+            <input type="text" id="tx-phase" class="text-input" style="width: 100%" placeholder="Escribe cualquier categoría o elige una sugerencia..." required list="category-suggestions">
+            <datalist id="category-suggestions"></datalist>
           </div>
 
           <div class="form-group">
-            <label for="tx-date">Fecha de Aporte</label>
+            <label for="tx-comments">Comentarios / Notas (Opcional)</label>
+            <textarea id="tx-comments" class="text-input" rows="2" style="width: 100%; resize: vertical; font-family: inherit;" placeholder="Escribe aquí cualquier comentario o aclaración sobre el gasto..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="tx-date">Fecha</label>
             <input type="date" id="tx-date" class="text-input" style="width: 100%" required>
           </div>
 
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary modal-close" type="button">Cancelar</button>
-          <button class="btn" type="submit" id="tx-submit-btn">Guardar Aporte</button>
+          <button class="btn" type="submit" id="tx-submit-btn">Guardar</button>
         </div>
       </form>
     </div>
@@ -798,14 +810,12 @@
 
           <div class="form-group">
             <label for="bg-provider">Proveedor Sugerido / Contratado</label>
-            <input type="text" id="bg-provider" class="text-input" style="width: 100%" placeholder="Ej: Carpintería Gómez, Estudio Creativo" list="provider-suggestions">
+            <input type="text" id="bg-provider" class="text-input" style="width: 100%" placeholder="Escribe cualquier proveedor..." list="provider-suggestions">
           </div>
 
           <div class="form-group">
-            <label for="bg-phase">Rubro / Categoría</label>
-            <select id="bg-phase" class="select-input" style="width: 100%" required>
-              <!-- Cargado dinámicamente -->
-            </select>
+            <label for="bg-phase">Rubro / Categoría (Puedes escribir cualquiera)</label>
+            <input type="text" id="bg-phase" class="text-input" style="width: 100%" placeholder="Escribe cualquier categoría o elige una sugerencia..." required list="category-suggestions">
           </div>
 
           <div class="form-row-2">

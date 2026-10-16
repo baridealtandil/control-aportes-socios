@@ -89,9 +89,32 @@ async function loadState() {
   renderAll();
 }
 
+// Helper global: Determinar si un movimiento es un Gasto/Pago a Proveedor (true) o un Ingreso de Fondos a Caja sin gastar aún (false)
+function isExpenseTransaction(tx) {
+  if (tx.is_expense === true || tx.is_expense === "true") return true;
+  if (tx.is_expense === false || tx.is_expense === "false") return false;
+  // El ingreso inicial del crédito de $60M es un ingreso a caja
+  if (tx.id === "92b84a76-20f6-4272-8aa6-e9ad22295f3e") return false;
+  if (tx.budget_id) return true;
+  const c = (tx.concept || "").toLowerCase();
+  if (c.includes("aporte de capital inicial") || c.includes("ingreso de crédito") || c.includes("ingreso credito")) {
+    return false;
+  }
+  if (tx.provider && tx.provider.trim() !== "" && tx.provider.trim() !== tx.partner) {
+    return true;
+  }
+  return false;
+}
+
+// Helper global: Formatear bloque visual de comentarios si existen
+function formatCommentsHtml(tx) {
+  const comments = tx.comments || (tx.rawTx && tx.rawTx.comments) || "";
+  if (!comments || !comments.trim()) return "";
+  return `<div style="font-size:0.78rem; color:var(--text-muted); margin-top:3px; font-style:italic;">💬 ${comments}</div>`;
+}
+
 function renderCategories() {
-  const selectTx = document.getElementById("tx-phase");
-  const selectBg = document.getElementById("bg-phase");
+  const datalist = document.getElementById("category-suggestions");
   const filterTx = document.getElementById("filter-fase");
   const filterBg = document.getElementById("filter-budget-fase");
 
@@ -103,10 +126,17 @@ function renderCategories() {
     "Fase 5: Mobiliario, Ambientación y Apertura"
   ];
 
-  // Filtrar duplicados y ordenar por fase oficial
+  // Recolectar categorías de la base de datos + categorías libres escritas en transacciones o presupuestos
   const uniqueCatsMap = {};
+  PHASE_ORDER.forEach(p => { uniqueCatsMap[p] = true; });
   state.categories.forEach(c => {
-    if (c && c.name) uniqueCatsMap[c.name.trim()] = true;
+    if (c && c.name && c.name.trim()) uniqueCatsMap[c.name.trim()] = true;
+  });
+  state.transactions.forEach(tx => {
+    if (tx.phase && tx.phase.trim()) uniqueCatsMap[tx.phase.trim()] = true;
+  });
+  state.budgets.forEach(b => {
+    if (b.phase && b.phase.trim()) uniqueCatsMap[b.phase.trim()] = true;
   });
 
   let cats = Object.keys(uniqueCatsMap);
@@ -115,28 +145,28 @@ function renderCategories() {
       const idx = PHASE_ORDER.findIndex(p => name.startsWith(p.split(':')[0]));
       return idx === -1 ? 99 : idx;
     };
-    return getIndex(a) - getIndex(b);
+    const idxA = getIndex(a);
+    const idxB = getIndex(b);
+    if (idxA !== idxB) return idxA - idxB;
+    return a.localeCompare(b);
   });
 
-  // Mantener los valores actuales seleccionados
-  const currentTxVal = selectTx.value;
-  const currentBgVal = selectBg.value;
-  const currentFilterTxVal = filterTx.value;
-  const currentFilterBgVal = filterBg.value;
+  const currentFilterTxVal = filterTx ? filterTx.value : "";
+  const currentFilterBgVal = filterBg ? filterBg.value : "";
 
-  // Llenar selectores de creación con el nombre completo
-  selectTx.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
-  selectBg.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (datalist) {
+    datalist.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+  }
 
-  // Llenar selectores de filtro con el nombre completo de la fase
-  filterTx.innerHTML = '<option value="">Todos los Rubros</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
-  filterBg.innerHTML = '<option value="">Todos los Rubros</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (filterTx) {
+    filterTx.innerHTML = '<option value="">Todos los Rubros / Categorías</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (cats.includes(currentFilterTxVal)) filterTx.value = currentFilterTxVal;
+  }
 
-  // Restaurar selecciones anteriores si siguen existiendo
-  if (cats.includes(currentTxVal)) selectTx.value = currentTxVal;
-  if (cats.includes(currentBgVal)) selectBg.value = currentBgVal;
-  if (cats.includes(currentFilterTxVal)) filterTx.value = currentFilterTxVal;
-  if (cats.includes(currentFilterBgVal)) filterBg.value = currentFilterBgVal;
+  if (filterBg) {
+    filterBg.innerHTML = '<option value="">Todos los Rubros / Categorías</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (cats.includes(currentFilterBgVal)) filterBg.value = currentFilterBgVal;
+  }
 }
 
 const populateCategoryDropdowns = renderCategories;
@@ -144,7 +174,8 @@ const populateCategoryDropdowns = renderCategories;
 // Carga las opciones de presupuestos activos en el formulario de aportes
 function loadBudgetSelectOptions() {
   const select = document.getElementById("tx-budget-id");
-  select.innerHTML = '<option value="">Ninguno / Aporte de Capital General</option>';
+  if (!select) return;
+  select.innerHTML = '<option value="">Sin presupuesto predefinido (Gasto Libre)</option>';
   
   // Agrupar por fase/categoría para orden
   const phases = {};
@@ -423,7 +454,7 @@ function showPartnerHistory(partnerName) {
       const dateFormatted = formatDate(tx.date);
       
       const associatedBudget = state.budgets.find(b => b.id === tx.budget_id);
-      const budgetText = associatedBudget ? `📌 Presupuesto: ${associatedBudget.concept}` : 'Aporte de Capital General';
+      const budgetText = associatedBudget ? `📌 Presupuesto: ${associatedBudget.concept}` : (tx.phase || 'Gasto / Aporte General');
       
       const equivText = tx.currency === 'USD'
         ? `≈ $ ${formatNumber(amt * rateUsed)} ARS`
@@ -439,6 +470,7 @@ function showPartnerHistory(partnerName) {
           </strong>
         </div>
         <div style="font-weight:600; color:var(--text-main); margin-bottom:2px;">${tx.concept}</div>
+        ${formatCommentsHtml(tx)}
         <div style="font-size:0.78rem; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px; margin-top:4px;">
           <span>${tx.provider ? `Proveedor: <strong>${tx.provider}</strong>` : ''}</span>
           <span>${equivText} <span style="font-size:0.7rem;">(Dólar: $${formatNumber(rateUsed)})</span></span>
@@ -472,7 +504,7 @@ function openCreditOutputsModal() {
       const rateUsed = rate > 1 ? rate : rateToday;
       const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
 
-      if (tx.budget_id) {
+      if (isExpenseTransaction(tx)) {
         usedCreditARS += arsVal;
       } else {
         totalCreditARS += arsVal;
@@ -501,7 +533,7 @@ function openCreditOutputsModal() {
 
   // Filtrar las salidas pagadas con dinero del Crédito
   const creditOutputs = state.transactions
-    .filter(tx => tx.partner === "Sociedad (Crédito)" && tx.budget_id)
+    .filter(tx => tx.partner === "Sociedad (Crédito)" && isExpenseTransaction(tx))
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (creditOutputs.length === 0) {
@@ -514,6 +546,7 @@ function openCreditOutputsModal() {
       const rateUsed = rate > 1 ? rate : rateToday;
       const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
       const associatedBudget = state.budgets.find(b => b.id === tx.budget_id);
+      const rubroLabel = associatedBudget ? associatedBudget.concept : (tx.phase || 'Gasto Libre');
 
       const card = document.createElement("div");
       card.style.cssText = "background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); border-radius:10px; padding:12px; font-size:0.85rem;";
@@ -525,9 +558,10 @@ function openCreditOutputsModal() {
           </strong>
         </div>
         <div style="font-weight:600; color:var(--text-main); margin-bottom:2px;">${tx.concept}</div>
+        ${formatCommentsHtml(tx)}
         <div style="font-size:0.78rem; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px; margin-top:4px;">
           <span>${tx.provider ? `Proveedor: <strong>${tx.provider}</strong>` : ''}</span>
-          <span>${associatedBudget ? `📌 Rubro: <strong>${associatedBudget.concept}</strong>` : ''}</span>
+          <span>📌 Categoría: <strong>${rubroLabel}</strong></span>
         </div>
         ${window.AppStorage.isAdmin() ? `
           <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:8px; border-top:1px solid rgba(255,255,255,0.05); padding-top:6px;">
@@ -567,24 +601,12 @@ function renderPayments() {
   let paidWithCreditARS = 0;
   let paidWithSociosARS = 0;
 
-  // Helper: Identificar si una transacción es un Pago a Proveedor/Obra (Egreso)
-  const isActualPayment = (tx) => {
-    if (tx.budget_id) return true;
-    if (tx.provider && tx.provider.trim() !== "" && tx.provider.trim() !== tx.partner) {
-      const c = (tx.concept || "").toLowerCase();
-      if (!c.includes("aporte") && !c.includes("crédito") && !c.includes("credito") && !c.includes("ingreso")) {
-        return true;
-      }
-    }
-    return false;
-  };
-
   const payments = state.transactions.filter(tx => {
-    if (!isActualPayment(tx)) return false;
+    if (!isExpenseTransaction(tx)) return false;
     if (filterOrigen && tx.partner !== filterOrigen) return false;
 
     if (state.searchQuery) {
-      const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.currency} ${tx.amount}`;
+      const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.comments || ''} ${tx.currency} ${tx.amount}`;
       return matchesSearch(searchTarget, state.searchQuery);
     }
     return true;
@@ -597,7 +619,7 @@ function renderPayments() {
 
   // Sumar únicamente los pagos reales a proveedores
   state.transactions.forEach(tx => {
-    if (isActualPayment(tx)) {
+    if (isExpenseTransaction(tx)) {
       const amt = parseFloat(tx.amount);
       const rate = parseFloat(tx.rate || 1);
       const rateUsed = rate > 1 ? rate : rateToday;
@@ -637,6 +659,7 @@ function renderPayments() {
     const budgetConceptHtml = associatedBudget 
       ? `<br><span style="font-size:0.75rem;color:var(--success-light)">📌 Presupuesto: ${associatedBudget.concept}</span>` 
       : "";
+    const commentsHtml = formatCommentsHtml(tx);
 
     const origenBadge = tx.partner === "Sociedad (Crédito)"
       ? `<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">🏛️ Crédito Sociedad</span>`
@@ -648,8 +671,8 @@ function renderPayments() {
       <td>${dateFormatted}</td>
       <td>${origenBadge}</td>
       <td>${tx.provider ? `<strong>${tx.provider}</strong>` : `<span class="text-muted">-</span>`}</td>
-      <td>${tx.concept}${budgetConceptHtml}</td>
-      <td><span class="widget-pill btn-secondary" style="padding:4px 8px;font-size:0.75rem;">${tx.phase ? tx.phase.split(':')[0] : 'Rubro'}</span></td>
+      <td>${tx.concept}${budgetConceptHtml}${commentsHtml}</td>
+      <td><span class="widget-pill btn-secondary" style="padding:4px 8px;font-size:0.75rem;" title="${tx.phase || ''}">${tx.phase ? tx.phase.split(':')[0] : 'General'}</span></td>
       <td class="cell-amount text-primary" style="font-weight:600">
         ${formatCurrency(amount, tx.currency)}
       </td>
@@ -680,7 +703,9 @@ function renderPayments() {
       </div>
       <div class="mobile-tx-concept" style="margin-top:6px;">
         <div style="font-weight:600; color:var(--text-main);">${tx.concept}</div>
+        ${commentsHtml}
         ${tx.provider ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">Proveedor: <strong>${tx.provider}</strong></div>` : ''}
+        ${tx.phase ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">🏷️ Categoría: ${tx.phase}</div>` : ''}
         ${associatedBudget ? `<div style="font-size:0.75rem;color:var(--success-light);margin-top:2px;">📌 Presupuesto: ${associatedBudget.concept}</div>` : ""}
       </div>
       <div class="mobile-tx-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-top:1px solid rgba(255,255,255,0.04); padding-top:8px; font-size:0.8rem; color:var(--text-muted);">
@@ -736,9 +761,10 @@ function renderResumenCuenta() {
 
     const isCreditSource = (tx.partner === "Sociedad (Crédito)");
     const isPartnerSource = PARTNERS.includes(tx.partner);
+    const isExpense = isExpenseTransaction(tx);
 
-    // Caso A: Ingreso de Crédito Bancario a la Sociedad (sin budget_id)
-    if (isCreditSource && !tx.budget_id) {
+    // Caso A: Ingreso de Crédito Bancario a la Sociedad (no es gasto)
+    if (isCreditSource && !isExpense) {
       runningBalanceARS += arsVal;
       totalIngresosARS += arsVal;
       ledgerEntries.push({
@@ -747,6 +773,7 @@ function renderResumenCuenta() {
         partner: tx.partner,
         concept: tx.concept || "Ingreso Crédito Sociedad",
         provider: "",
+        comments: tx.comments || "",
         ingreso: arsVal,
         egreso: 0,
         runningBalanceARS,
@@ -754,8 +781,8 @@ function renderResumenCuenta() {
         rawTx: tx
       });
     }
-    // Caso B: Pago a proveedor con dinero del Crédito (con budget_id)
-    else if (isCreditSource && tx.budget_id) {
+    // Caso B: Pago/Gasto con dinero del Crédito
+    else if (isCreditSource && isExpense) {
       runningBalanceARS -= arsVal;
       totalEgresosARS += arsVal;
       ledgerEntries.push({
@@ -766,6 +793,7 @@ function renderResumenCuenta() {
         provider: tx.provider,
         budget_id: tx.budget_id,
         phase: tx.phase,
+        comments: tx.comments || "",
         ingreso: 0,
         egreso: arsVal,
         runningBalanceARS,
@@ -784,6 +812,7 @@ function renderResumenCuenta() {
         partner: tx.partner,
         concept: `Aporte de Capital de ${tx.partner} (${tx.concept})`,
         provider: "",
+        comments: tx.comments || "",
         ingreso: arsVal,
         egreso: 0,
         runningBalanceARS,
@@ -791,8 +820,8 @@ function renderResumenCuenta() {
         rawTx: tx
       });
 
-      // 2. Si el aporte se usó directamente para pagar un gasto/presupuesto (- Egreso a Proveedor)
-      if (tx.budget_id || (tx.provider && tx.provider !== tx.partner)) {
+      // 2. Si el aporte se usó directamente para pagar un gasto (- Egreso a Proveedor)
+      if (isExpense) {
         runningBalanceARS -= arsVal;
         totalEgresosARS += arsVal;
         ledgerEntries.push({
@@ -803,6 +832,7 @@ function renderResumenCuenta() {
           provider: tx.provider,
           budget_id: tx.budget_id,
           phase: tx.phase,
+          comments: tx.comments || "",
           ingreso: 0,
           egreso: arsVal,
           runningBalanceARS,
@@ -829,7 +859,7 @@ function renderResumenCuenta() {
     if (filterTipo === "ingreso" && entry.type !== "ingreso") return false;
     if (filterTipo === "egreso" && entry.type !== "egreso") return false;
     if (state.searchQuery) {
-      const searchTarget = `${entry.partner} ${entry.concept} ${entry.provider || ''} ${entry.ingreso} ${entry.egreso}`;
+      const searchTarget = `${entry.partner} ${entry.concept} ${entry.provider || ''} ${entry.comments || ''} ${entry.ingreso} ${entry.egreso}`;
       return matchesSearch(searchTarget, state.searchQuery);
     }
     return true;
@@ -852,6 +882,7 @@ function renderResumenCuenta() {
     const budgetConceptHtml = associatedBudget 
       ? `<br><span style="font-size:0.75rem;color:var(--success-light)">📌 Presupuesto: ${associatedBudget.concept}</span>` 
       : "";
+    const commentsHtml = formatCommentsHtml(tx);
 
     const origenBadge = tx.partner === "Sociedad (Crédito)"
       ? `<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">🏛️ Crédito Sociedad</span>`
@@ -872,7 +903,7 @@ function renderResumenCuenta() {
     tr.innerHTML = `
       <td>${dateFormatted}</td>
       <td>${origenBadge}</td>
-      <td>${tx.concept}${tx.provider ? ` (Prov: <strong>${tx.provider}</strong>)` : ''}${budgetConceptHtml}</td>
+      <td>${tx.concept}${tx.provider ? ` (Prov: <strong>${tx.provider}</strong>)` : ''}${budgetConceptHtml}${commentsHtml}</td>
       <td style="text-align:right">${ingresoHtml}</td>
       <td style="text-align:right">${egresoHtml}</td>
       <td style="text-align:right">${saldoHtml}</td>
@@ -897,6 +928,7 @@ function renderResumenCuenta() {
       </div>
       <div class="mobile-tx-concept" style="margin-top:6px;">
         <div style="font-weight:600; color:var(--text-main);">${tx.concept}</div>
+        ${commentsHtml}
         ${tx.provider ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">Proveedor: <strong>${tx.provider}</strong></div>` : ''}
       </div>
       <div class="mobile-tx-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-top:1px solid rgba(255,255,255,0.04); padding-top:8px; font-size:0.8rem; color:var(--text-muted);">
@@ -933,7 +965,7 @@ function renderTransactions() {
     
     // Filtro del buscador global
     if (state.searchQuery) {
-      const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.currency} ${tx.amount}`;
+      const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.comments || ''} ${tx.currency} ${tx.amount}`;
       return matchesSearch(searchTarget, state.searchQuery);
     }
 
@@ -964,14 +996,16 @@ function renderTransactions() {
     const budgetConceptHtml = associatedBudget 
       ? `<br><span style="font-size:0.75rem;color:var(--success-light)">📌 Presupuesto: ${associatedBudget.concept}</span>` 
       : "";
+    const commentsHtml = formatCommentsHtml(tx);
+    const phaseShort = tx.phase ? tx.phase.split(':')[0] : 'General';
 
     // Fila de Tabla (Desktop)
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${dateFormatted}</td>
       <td><strong>${tx.partner}</strong></td>
-      <td><span class="widget-pill btn-secondary" style="padding:4px 8px;font-size:0.75rem;">${tx.phase.split(':')[0]}</span></td>
-      <td>${tx.concept}${budgetConceptHtml}</td>
+      <td><span class="widget-pill btn-secondary" style="padding:4px 8px;font-size:0.75rem;" title="${tx.phase || ''}">${phaseShort}</span></td>
+      <td>${tx.concept}${budgetConceptHtml}${commentsHtml}</td>
       <td>${tx.provider ? `<strong>${tx.provider}</strong>` : `<span class="text-muted">-</span>`}</td>
       <td class="cell-amount ${tx.currency === "USD" ? "text-success" : "text-primary"}" style="font-weight:600">
         ${formatCurrency(amount, tx.currency)}
@@ -1003,7 +1037,8 @@ function renderTransactions() {
         </span>
       </div>
       <div class="mobile-tx-concept">
-        <strong>${tx.phase.split(':')[0]}:</strong> ${tx.concept}
+        <strong>${phaseShort}:</strong> ${tx.concept}
+        ${commentsHtml}
         ${tx.provider ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">Proveedor: <strong>${tx.provider}</strong></div>` : ''}
         ${associatedBudget ? `<div style="font-size:0.75rem;color:var(--success-light);margin-top:2px;">📌 Relativo a: ${associatedBudget.concept}</div>` : ""}
       </div>
@@ -1274,7 +1309,7 @@ async function saveBudget(event) {
   const id = document.getElementById("bg-id").value;
   const concept = document.getElementById("bg-concept").value.trim();
   const provider = document.getElementById("bg-provider").value.trim();
-  const phase = document.getElementById("bg-phase").value;
+  const phase = document.getElementById("bg-phase").value.trim() || "General";
   const currency = document.getElementById("bg-currency").value;
   const amount = parseFloat(document.getElementById("bg-amount").value);
   const date = document.getElementById("bg-date").value;
@@ -1326,7 +1361,7 @@ window.editBudget = function(id) {
   document.getElementById("bg-id").value = bg.id;
   document.getElementById("bg-concept").value = bg.concept;
   document.getElementById("bg-provider").value = bg.provider || "";
-  document.getElementById("bg-phase").value = bg.phase;
+  document.getElementById("bg-phase").value = bg.phase || "";
   document.getElementById("bg-currency").value = bg.currency;
   document.getElementById("bg-amount").value = bg.amount;
   document.getElementById("bg-date").value = bg.date;
@@ -1383,7 +1418,10 @@ async function saveTransaction(event) {
   const budget_id = document.getElementById("tx-budget-id").value;
   const concept = document.getElementById("tx-concept").value.trim();
   const provider = document.getElementById("tx-provider").value.trim();
-  let phase = document.getElementById("tx-phase").value;
+  let phase = document.getElementById("tx-phase").value.trim();
+  const comments = (document.getElementById("tx-comments")?.value || "").trim();
+  const isExpenseSelect = document.getElementById("tx-is-expense");
+  const is_expense = isExpenseSelect ? (isExpenseSelect.value !== "false") : true;
   const date = document.getElementById("tx-date").value;
 
   if (!amount || amount <= 0) return alert("Por favor ingresa un monto válido mayor a 0");
@@ -1391,12 +1429,15 @@ async function saveTransaction(event) {
   if (!concept) return alert("Por favor ingresa un concepto");
   if (!date) return alert("Por favor selecciona una fecha");
 
-  // Si se asocia a un presupuesto, heredar la fase del presupuesto para consistencia
-  if (budget_id) {
+  // Si se asocia a un presupuesto y el usuario no escribió una categoría propia, heredar la del presupuesto
+  if (budget_id && !phase) {
     const associatedBudget = state.budgets.find(b => b.id === budget_id);
-    if (associatedBudget) {
+    if (associatedBudget && associatedBudget.phase) {
       phase = associatedBudget.phase;
     }
+  }
+  if (!phase) {
+    phase = "General";
   }
 
   const submitBtn = document.getElementById("tx-submit-btn");
@@ -1414,6 +1455,8 @@ async function saveTransaction(event) {
         concept,
         provider,
         phase,
+        comments,
+        is_expense,
         date,
         budget_id: budget_id || null
       };
@@ -1437,6 +1480,8 @@ async function saveTransaction(event) {
           concept,
           provider,
           phase,
+          comments,
+          is_expense,
           date,
           budget_id: budget_id || null
         };
@@ -1487,11 +1532,15 @@ window.editTransaction = function(id) {
   document.getElementById("tx-concept").value = tx.concept;
   document.getElementById("tx-provider").value = tx.provider || "";
   document.getElementById("tx-phase").value = tx.phase || "";
+  const commentsInput = document.getElementById("tx-comments");
+  if (commentsInput) commentsInput.value = tx.comments || "";
+  const isExpenseSelect = document.getElementById("tx-is-expense");
+  if (isExpenseSelect) isExpenseSelect.value = isExpenseTransaction(tx) ? "true" : "false";
   document.getElementById("tx-date").value = tx.date;
 
   toggleRateVisibility();
 
-  document.getElementById("modal-tx-title").textContent = "Editar Aporte";
+  document.getElementById("modal-tx-title").textContent = "Editar Aporte / Pago";
   openModal("modal-transaction");
 };
 
@@ -1517,6 +1566,10 @@ window.payBudgetItem = function(id) {
   document.getElementById("tx-concept").value = b.concept;
   document.getElementById("tx-provider").value = b.provider || "";
   document.getElementById("tx-phase").value = b.phase || "";
+  const commentsInput = document.getElementById("tx-comments");
+  if (commentsInput) commentsInput.value = "";
+  const isExpenseSelect = document.getElementById("tx-is-expense");
+  if (isExpenseSelect) isExpenseSelect.value = "true";
   document.getElementById("tx-currency").value = b.currency || "ARS";
   
   const rateToday = state.dolarBlue.promedio || 1545;
@@ -1642,7 +1695,11 @@ function closeModal(modalId) {
     if (modalId === "modal-transaction") {
       document.getElementById("tx-form").reset();
       document.getElementById("tx-id").value = "";
-      document.getElementById("modal-tx-title").textContent = "Nuevo Aporte";
+      document.getElementById("modal-tx-title").textContent = "Nuevo Aporte / Gasto";
+      const commentsInput = document.getElementById("tx-comments");
+      if (commentsInput) commentsInput.value = "";
+      const isExpenseSelect = document.getElementById("tx-is-expense");
+      if (isExpenseSelect) isExpenseSelect.value = "true";
       
       // Restaurar visualización de creación y checkboxes
       document.getElementById("tx-partners-group-create").classList.remove("hidden");
@@ -1866,6 +1923,8 @@ function initEventListeners() {
         if (budget.phase) {
           document.getElementById("tx-phase").value = budget.phase;
         }
+        const isExpenseSelect = document.getElementById("tx-is-expense");
+        if (isExpenseSelect) isExpenseSelect.value = "true";
       }
     }
   });
@@ -1896,15 +1955,21 @@ function initEventListeners() {
         cb.checked = (cb.value === "Sociedad (Crédito)");
       });
 
+      document.getElementById("tx-budget-id").value = "";
       document.getElementById("tx-concept").value = "";
       document.getElementById("tx-provider").value = "";
+      document.getElementById("tx-phase").value = "";
+      const commentsInput = document.getElementById("tx-comments");
+      if (commentsInput) commentsInput.value = "";
+      const isExpenseSelect = document.getElementById("tx-is-expense");
+      if (isExpenseSelect) isExpenseSelect.value = "true";
       document.getElementById("tx-amount").value = "";
       document.getElementById("tx-currency").value = "ARS";
 
       toggleRateVisibility();
       if (typeof updateTxUsdHelper === "function") updateTxUsdHelper();
 
-      document.getElementById("modal-tx-title").textContent = "Registrar Nuevo Pago a Proveedor";
+      document.getElementById("modal-tx-title").textContent = "Registrar Nuevo Pago / Gasto";
       openModal("modal-transaction");
     });
   }
@@ -1932,8 +1997,18 @@ function initEventListeners() {
   // Botones de Modales
   document.getElementById("btn-add-tx").addEventListener("click", () => {
     const today = new Date().toISOString().split('T')[0];
+    document.getElementById("tx-id").value = "";
     document.getElementById("tx-date").value = today;
     document.getElementById("tx-rate").value = state.dolarBlue.promedio || 1350;
+    document.getElementById("tx-budget-id").value = "";
+    document.getElementById("tx-concept").value = "";
+    document.getElementById("tx-provider").value = "";
+    document.getElementById("tx-phase").value = "";
+    const commentsInput = document.getElementById("tx-comments");
+    if (commentsInput) commentsInput.value = "";
+    const isExpenseSelect = document.getElementById("tx-is-expense");
+    if (isExpenseSelect) isExpenseSelect.value = "true";
+    document.getElementById("tx-amount").value = "";
     toggleRateVisibility();
     openModal("modal-transaction");
   });
@@ -1941,6 +2016,7 @@ function initEventListeners() {
   document.getElementById("btn-add-budget").addEventListener("click", () => {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById("bg-date").value = today;
+    document.getElementById("bg-phase").value = "";
     openModal("modal-budget");
   });
 
@@ -2084,8 +2160,8 @@ function initEventListeners() {
 function renderCaja() {
   const rateToday = state.dolarBlue.promedio || 1545;
 
-  // 1. Filtrar aportes de SOCIOS SIN budget_id (no asignados a ningún gasto)
-  const unassigned = state.transactions.filter(tx => !tx.budget_id && tx.partner !== "Sociedad (Crédito)");
+  // 1. Filtrar aportes de SOCIOS que ingresaron a Caja (no asignados a un gasto)
+  const unassigned = state.transactions.filter(tx => !isExpenseTransaction(tx) && tx.partner !== "Sociedad (Crédito)");
 
   // Totales por moneda
   let cajaUSD = 0;
@@ -2121,7 +2197,7 @@ function renderCaja() {
       const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
       const usdVal = tx.currency === 'USD' ? amt : (rateUsed > 1 ? amt / rateUsed : amt / rateToday);
 
-      if (tx.budget_id) {
+      if (isExpenseTransaction(tx)) {
         usedCreditARS += arsVal;
       } else {
         totalCreditARS += arsVal;
@@ -2316,21 +2392,23 @@ function shareWhatsAppSummary() {
     totalARS += arsVal;
     totalUSD += usdVal;
 
+    const isExpense = isExpenseTransaction(tx);
+
     if (PARTNERS.includes(tx.partner)) {
       partnerArsTotals[tx.partner] += arsVal;
-      if (!tx.budget_id) {
+      if (!isExpense) {
         unassignedPartnersARS += arsVal;
       }
     } else if (tx.partner === "Sociedad (Crédito)") {
-      if (tx.budget_id) {
+      if (isExpense) {
         usedCreditARS += arsVal;
       } else {
         totalCreditARS += arsVal;
       }
     }
 
-    // Si tiene budget_id, es un Pago Ejecutado a Obra/Gastos
-    if (tx.budget_id) {
+    // Si es un gasto/pago ejecutado a obra
+    if (isExpense) {
       totalPaidARS += arsVal;
     }
   });
