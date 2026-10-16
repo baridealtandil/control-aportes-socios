@@ -313,17 +313,17 @@
         </div>
 
         <div class="sub-stats-row" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-          <div class="sub-stat-card">
-            <div class="sub-stat-title">Total Pagado a Proveedores ($ARS)</div>
-            <div class="sub-stat-val text-primary" id="pagos-total-ars" style="color:var(--primary-light);">$ 0</div>
+          <div class="sub-stat-card" style="background:rgba(16,185,129,0.08); border-color:rgba(16,185,129,0.25);">
+            <div class="sub-stat-title" style="color:#34d399;">👥 Gastado por Socios (sin crédito)</div>
+            <div class="sub-stat-val text-success" id="pagos-socios-ars">$ 0</div>
           </div>
           <div class="sub-stat-card" style="background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.25);">
-            <div class="sub-stat-title" style="color:#f59e0b;">🏛️ Pagado a Obra con Crédito</div>
+            <div class="sub-stat-title" style="color:#f59e0b;">🏛️ Gastado con Crédito</div>
             <div class="sub-stat-val text-warning" id="pagos-credito-ars">$ 0</div>
           </div>
-          <div class="sub-stat-card" style="background:rgba(16,185,129,0.08); border-color:rgba(16,185,129,0.25);">
-            <div class="sub-stat-title" style="color:#34d399;">👥 Pagado por Socios / Caja</div>
-            <div class="sub-stat-val text-success" id="pagos-socios-ars">$ 0</div>
+          <div class="sub-stat-card">
+            <div class="sub-stat-title">Σ Total Gastado (Socios + Crédito)</div>
+            <div class="sub-stat-val text-primary" id="pagos-total-ars" style="color:var(--primary-light);">$ 0</div>
           </div>
         </div>
       </section>
