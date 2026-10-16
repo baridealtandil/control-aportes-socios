@@ -174,7 +174,7 @@ const populateCategoryDropdowns = renderCategories;
 // Carga las opciones de presupuestos activos en el formulario de aportes
 function loadBudgetSelectOptions() {
   const select = document.getElementById("tx-budget-id");
-  if (!select) return;
+  if (!select || select.tagName !== "SELECT") return;
   select.innerHTML = '<option value="">Sin presupuesto predefinido (Gasto Libre)</option>';
   
   // Agrupar por fase/categoría para orden

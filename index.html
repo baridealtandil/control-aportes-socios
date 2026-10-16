@@ -733,13 +733,8 @@
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="tx-budget-id">Asociar a Ítem Presupuestado (Opcional — puedes dejarlo libre)</label>
-            <select id="tx-budget-id" class="select-input" style="width: 100%">
-              <option value="">Sin presupuesto predefinido (Gasto Libre)</option>
-              <!-- Cargado dinámicamente -->
-            </select>
-          </div>
+          <!-- Vínculo a presupuesto: oculto. Se completa solo desde "Pagar" en Presupuestos o al editar un pago ya vinculado -->
+          <input type="hidden" id="tx-budget-id" value="">
 
           <div class="form-group">
             <label for="tx-concept">Concepto / Detalle del Gasto</label>
