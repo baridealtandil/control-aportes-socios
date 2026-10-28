@@ -531,7 +531,7 @@
               <tr>
                 <th>Concepto / Ítem</th>
                 <th>Rubro</th>
-                <th>Proveedor Sugerido</th>
+                <th>Proveedores</th>
                 <th>Presupuesto (Orig.)</th>
                 <th>Aportado (Real)</th>
                 <th>Saldo Restante</th>
@@ -804,7 +804,7 @@
           </div>
 
           <div class="form-group">
-            <label for="bg-provider">Proveedor Sugerido / Contratado</label>
+            <label for="bg-provider">Proveedores (si son varios, separalos con /)</label>
             <input type="text" id="bg-provider" class="text-input" style="width: 100%" placeholder="Escribe cualquier proveedor..." list="provider-suggestions">
           </div>
 
@@ -839,6 +839,29 @@
           <button class="btn" type="submit" id="bg-submit-btn">Guardar Presupuesto</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: PROVEEDORES DE UN ÍTEM PRESUPUESTADO -->
+  <div class="modal-overlay" id="modal-bg-providers">
+    <div class="modal-container" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Proveedores del ítem</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="bgp-id">
+        <div id="bgp-concept" style="font-weight:600; margin-bottom:12px;"></div>
+        <div id="bgp-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;"></div>
+        <form id="bgp-add-form" style="display:flex; gap:8px;">
+          <input type="text" id="bgp-new" class="text-input" style="flex:1" placeholder="Nuevo proveedor (ej: Plomero Juan)" list="provider-suggestions">
+          <button class="btn" type="submit">+ Agregar</button>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close" type="button">Cancelar</button>
+        <button class="btn" type="button" id="bgp-save-btn">Guardar</button>
+      </div>
     </div>
   </div>
 

@@ -1231,7 +1231,7 @@ function renderBudgets() {
     tr.innerHTML = `
       <td><strong>${b.concept}</strong><br><span style="font-size:0.75rem;color:var(--text-muted)">Fecha: ${dateFormatted}</span></td>
       <td><span class="widget-pill btn-secondary" style="padding:4px 8px;font-size:0.75rem;">${b.phase.split(':')[0]}</span></td>
-      <td>${b.provider ? `<strong>${b.provider}</strong>` : `<span class="text-muted">-</span>`}</td>
+      <td>${renderProviderChips(b)}</td>
       <td style="font-weight:600">${formatCurrency(amount, b.currency)}</td>
       <td class="text-success" style="font-weight:600">${formatCurrency(spentOriginal, b.currency)}</td>
       <td>${badgeHtml}</td>
@@ -1263,7 +1263,7 @@ function renderBudgets() {
       </div>
       <div class="mobile-tx-concept">
         <strong>${b.phase.split(':')[0]}</strong>
-        ${b.provider ? `<div style="font-size:0.85rem;color:var(--text-muted);margin:2px 0;">Proveedor: <strong>${b.provider}</strong></div>` : ''}
+        <div style="font-size:0.85rem;color:var(--text-muted);margin:4px 0;">Proveedores: ${renderProviderChips(b)}</div>
         <div style="margin-top: 5px; display:flex; justify-content:space-between; align-items:center;">
           <span>Financiado: <strong>${formatCurrency(spentOriginal, b.currency)}</strong> (${progressPercent}%)</span>
           ${badgeHtml}
@@ -1298,6 +1298,96 @@ function toggleTabButtons() {
       if (btnAddTx) btnAddTx.classList.remove("hidden");
       if (btnAddBudget) btnAddBudget.classList.add("hidden");
     }
+  }
+}
+
+// Proveedores de un ítem presupuestado: se guardan en el mismo campo `provider`, separados por " / "
+function splitProviders(text) {
+  return (text || "").split("/").map(p => p.trim()).filter(Boolean);
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function renderProviderChips(b) {
+  const chips = splitProviders(b.provider).map(p =>
+    `<span class="widget-pill btn-secondary" style="display:inline-block;padding:3px 8px;margin:2px 4px 2px 0;font-size:0.75rem;">${escapeAttr(p)}</span>`
+  ).join("") || `<span class="text-muted">Sin proveedor</span>`;
+  const editBtn = window.AppStorage.isAdmin()
+    ? `<button class="btn btn-secondary btn-small" onclick="editBudgetProviders('${b.id}')" style="padding:2px 8px;font-size:0.75rem;margin-left:2px;" title="Editar o agregar proveedores">✏️</button>`
+    : "";
+  return chips + editBtn;
+}
+
+let bgpProviders = [];
+
+function renderBgpList() {
+  const list = document.getElementById("bgp-list");
+  list.innerHTML = "";
+  if (bgpProviders.length === 0) {
+    list.innerHTML = `<div class="text-muted" style="font-size:0.85rem;">Todavía no hay proveedores. Agregá uno abajo.</div>`;
+    return;
+  }
+  bgpProviders.forEach((p, i) => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex; gap:8px; align-items:center;";
+    row.innerHTML = `
+      <input type="text" class="text-input" style="flex:1" value="${escapeAttr(p)}" list="provider-suggestions">
+      <button class="btn btn-danger btn-small" type="button" title="Quitar">X</button>
+    `;
+    row.querySelector("input").addEventListener("input", e => { bgpProviders[i] = e.target.value; });
+    row.querySelector("button").addEventListener("click", () => { bgpProviders.splice(i, 1); renderBgpList(); });
+    list.appendChild(row);
+  });
+}
+
+window.editBudgetProviders = function(id) {
+  if (!window.AppStorage.isAdmin()) return;
+  const bg = state.budgets.find(b => b.id === id);
+  if (!bg) return;
+  document.getElementById("bgp-id").value = bg.id;
+  document.getElementById("bgp-concept").textContent = bg.concept;
+  document.getElementById("bgp-new").value = "";
+  bgpProviders = splitProviders(bg.provider);
+  renderBgpList();
+  openModal("modal-bg-providers");
+};
+
+function addBgpProvider(event) {
+  event.preventDefault();
+  const input = document.getElementById("bgp-new");
+  const name = input.value.replace(/\//g, "-").trim();
+  if (!name) return;
+  bgpProviders.push(name);
+  input.value = "";
+  renderBgpList();
+}
+
+async function saveBudgetProviders() {
+  if (!window.AppStorage.isAdmin()) return alert("No tienes permisos de administrador.");
+  const id = document.getElementById("bgp-id").value;
+  const bg = state.budgets.find(b => b.id === id);
+  if (!bg) return;
+
+  // Si quedó algo escrito en "Nuevo proveedor" sin tocar Agregar, también se suma
+  const pending = document.getElementById("bgp-new").value.replace(/\//g, "-").trim();
+  if (pending) bgpProviders.push(pending);
+
+  const provider = bgpProviders.map(p => p.replace(/\//g, "-").trim()).filter(Boolean).join(" / ");
+  const btn = document.getElementById("bgp-save-btn");
+  btn.classList.add("loading");
+  try {
+    await window.AppStorage.updateBudget(id, {
+      concept: bg.concept, phase: bg.phase, currency: bg.currency,
+      amount: bg.amount, date: bg.date, provider
+    });
+    closeModal("modal-bg-providers");
+    await loadState();
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    btn.classList.remove("loading");
   }
 }
 
@@ -1931,6 +2021,8 @@ function initEventListeners() {
   
   // Presupuestos
   document.getElementById("budget-form").addEventListener("submit", saveBudget);
+  document.getElementById("bgp-add-form").addEventListener("submit", addBgpProvider);
+  document.getElementById("bgp-save-btn").addEventListener("click", saveBudgetProviders);
   
   // Cambiar PIN
   document.getElementById("pin-config-form").addEventListener("submit", savePinConfig);
