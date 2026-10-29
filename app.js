@@ -231,6 +231,7 @@ function renderAll() {
   renderCaja();
   renderResumenCuenta();
   renderPayments();
+  renderCuanto();
   renderTransactions();
   calculateAndRenderBudgetDashboard();
   renderBudgets();
@@ -582,6 +583,135 @@ function matchesSearch(text, query) {
   if (!query) return true;
   if (!text) return false;
   return text.toLowerCase().includes(query.toLowerCase());
+}
+
+// 6a. ¿CUÁNTO GASTÉ? — buscador con total + gastos agrupados
+// Búsqueda tolerante: sin acentos, y por raíz de palabra ("techo" ≈ "techista", "plomería" ≈ "plomero")
+const CUANTO_STOPWORDS = new Set(["de","del","la","el","los","las","y","e","en","a","al","para","con","por","un","una",
+  "cuanto","cuánto","total","gaste","gasté","gastado","gasto","gastos","pago","pagos","pague","pagué","arreglo","arreglos","costo","costó","me","se"]);
+
+function normText(str) {
+  return (str || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+function stemWord(w) {
+  const endings = ["erias","eria","istas","ista","eros","eras","ero","era","ciones","cion","os","as","es","o","a","e","s"];
+  for (const end of endings) {
+    if (w.endsWith(end) && w.length - end.length >= 4) return w.slice(0, -end.length);
+  }
+  return w;
+}
+
+function cuantoQueryStems(query) {
+  return normText(query).split(/[^a-z0-9ñ]+/).filter(w => w && !CUANTO_STOPWORDS.has(w)).map(stemWord);
+}
+
+function cuantoMatches(text, stems) {
+  if (stems.length === 0) return false;
+  const words = normText(text).split(/[^a-z0-9ñ]+/).filter(Boolean);
+  return stems.every(q => words.some(w => w.startsWith(q) || stemWord(w).startsWith(q)));
+}
+
+function cuantoExpenseRows() {
+  const rateToday = state.dolarBlue.promedio || 1545;
+  return state.transactions.filter(isExpenseTransaction).map(tx => {
+    const amt = parseFloat(tx.amount) || 0;
+    const rate = parseFloat(tx.rate || 1);
+    const rateUsed = rate > 1 ? rate : rateToday;
+    const ars = tx.currency === "USD" ? amt * rateUsed : amt;
+    const usd = tx.currency === "USD" ? amt : amt / rateUsed;
+    const budget = tx.budget_id ? state.budgets.find(b => b.id === tx.budget_id) : null;
+    const trabajo = budget ? budget.concept : (tx.concept || "Sin detalle");
+    const proveedor = (tx.provider || "").trim() || "Sin proveedor";
+    const rubro = (tx.phase || "General").split(":").pop().trim() || "General";
+    const searchText = [tx.concept, tx.provider, tx.phase, tx.comments, tx.partner,
+      budget ? budget.concept : "", budget ? budget.provider : ""].join(" ");
+    return { tx, ars, usd, trabajo, proveedor, rubro, searchText };
+  });
+}
+
+function cuantoPaymentListHtml(rows) {
+  return rows.slice().sort((a, b) => (b.tx.date || "").localeCompare(a.tx.date || "")).map(r => `
+    <div class="mobile-tx-card" style="display:block; margin-bottom:8px;">
+      <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+        <div style="min-width:0;">
+          <div style="font-weight:600;">${escapeAttr(r.tx.concept || r.trabajo)}</div>
+          <div class="text-muted" style="font-size:0.8rem;">${formatDate(r.tx.date)} · ${escapeAttr(r.proveedor)} · pagó ${escapeAttr(r.tx.partner)}</div>
+          ${r.tx.comments ? `<div class="text-muted" style="font-size:0.8rem; font-style:italic;">${escapeAttr(r.tx.comments)}</div>` : ""}
+        </div>
+        <div style="text-align:right; white-space:nowrap;">
+          <div style="font-weight:700;">${formatCurrency(r.tx.amount, r.tx.currency)}</div>
+          ${r.tx.currency === "USD" ? `<div class="text-muted" style="font-size:0.75rem;">≈ ${formatCurrency(r.ars, "ARS")}</div>` : ""}
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+function cuantoTotalsHtml(rows, title) {
+  const ars = rows.reduce((s, r) => s + r.ars, 0);
+  const usd = rows.reduce((s, r) => s + r.usd, 0);
+  return `
+    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:baseline; margin-bottom:12px;">
+      <div style="font-size:0.9rem;">${title}</div>
+      <div style="font-size:1.8rem; font-weight:800; color:var(--primary-light);">${formatCurrency(ars, "ARS")}</div>
+      <div class="text-muted">≈ ${formatCurrency(usd, "USD")} · ${rows.length} ${rows.length === 1 ? "pago" : "pagos"}</div>
+    </div>`;
+}
+
+function renderCuanto() {
+  const resultEl = document.getElementById("cuanto-result");
+  const groupsEl = document.getElementById("cuanto-groups");
+  if (!resultEl || !groupsEl) return;
+
+  const rows = cuantoExpenseRows();
+  const query = document.getElementById("cuanto-q").value.trim();
+  const stems = cuantoQueryStems(query);
+
+  if (!query) {
+    resultEl.innerHTML = cuantoTotalsHtml(rows, "Total gastado en la obra:");
+  } else if (stems.length === 0) {
+    resultEl.innerHTML = `<div class="text-muted">Escribí qué querés buscar (ej: techo).</div>`;
+  } else {
+    const found = rows.filter(r => cuantoMatches(r.searchText, stems));
+    resultEl.innerHTML = found.length
+      ? cuantoTotalsHtml(found, `Gastado en "<strong>${escapeAttr(query)}</strong>":`) + cuantoPaymentListHtml(found)
+      : `<div class="text-muted">No encontré pagos con "${escapeAttr(query)}". Probá con otra palabra o mirá la lista de abajo.</div>`;
+  }
+
+  const groupBy = document.getElementById("cuanto-group").value;
+  const groups = {};
+  rows.forEach(r => {
+    const key = r[groupBy];
+    if (!groups[key]) groups[key] = { name: key, ars: 0, usd: 0, rows: [] };
+    groups[key].ars += r.ars;
+    groups[key].usd += r.usd;
+    groups[key].rows.push(r);
+  });
+  const total = rows.reduce((s, r) => s + r.ars, 0) || 1;
+  const sorted = Object.values(groups).sort((a, b) => b.ars - a.ars);
+
+  groupsEl.innerHTML = "";
+  sorted.forEach(g => {
+    const pct = (g.ars / total) * 100;
+    const item = document.createElement("div");
+    item.className = "mobile-tx-card";
+    item.style.cssText = "display:block; margin-bottom:8px; cursor:pointer;";
+    item.innerHTML = `
+      <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+        <div style="min-width:0;">
+          <div style="font-weight:600;">${escapeAttr(g.name)}</div>
+          <div class="text-muted" style="font-size:0.8rem;">${g.rows.length} ${g.rows.length === 1 ? "pago" : "pagos"} · ${pct.toFixed(1)}% del total</div>
+        </div>
+        <div style="text-align:right; white-space:nowrap;">
+          <div style="font-weight:700;">${formatCurrency(g.ars, "ARS")}</div>
+          <div class="text-muted" style="font-size:0.75rem;">≈ ${formatCurrency(g.usd, "USD")}</div>
+        </div>
+      </div>
+      <div class="progress-container" style="height:4px; margin:8px 0 0;"><div class="progress-bar-fill" style="width:${pct}%;"></div></div>
+      <div class="cuanto-detail hidden" style="margin-top:10px;">${cuantoPaymentListHtml(g.rows)}</div>`;
+    item.addEventListener("click", () => item.querySelector(".cuanto-detail").classList.toggle("hidden"));
+    groupsEl.appendChild(item);
+  });
 }
 
 // 6b. RENDERIZAR TABLA E HISTORIAL DE PAGOS A PROVEEDORES Y OBRAS
@@ -2189,6 +2319,14 @@ function initEventListeners() {
       renderPayments();
     });
   }
+
+  // ¿Cuánto gasté?
+  document.getElementById("cuanto-q").addEventListener("input", renderCuanto);
+  document.getElementById("cuanto-group").addEventListener("change", renderCuanto);
+  document.getElementById("cuanto-clear").addEventListener("click", () => {
+    document.getElementById("cuanto-q").value = "";
+    renderCuanto();
+  });
 
   // Navegación de pestañas (Tabs)
   const tabButtons = document.querySelectorAll(".tab-btn");

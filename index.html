@@ -80,6 +80,7 @@
     <!-- PESTAÑAS DE NAVEGACIÓN (ARRIBA DEL TODO) -->
     <div class="tabs-container">
       <button class="tab-btn active" data-tab="tab-inicio">🏠 Inicio</button>
+      <button class="tab-btn" data-tab="tab-cuanto">🔎 ¿Cuánto gasté?</button>
       <button class="tab-btn" data-tab="tab-caja">📦 Caja</button>
       <button class="tab-btn" data-tab="tab-resumen">🏛️ Resumen de Cuenta</button>
       <button class="tab-btn" data-tab="tab-pagos">💳 Pagos</button>
@@ -295,6 +296,36 @@
         <div class="mobile-history-list" id="mobile-resumen-list">
           <!-- Cargado dinámicamente -->
         </div>
+      </section>
+    </div>
+
+    <!-- ================= TAB: ¿CUÁNTO GASTÉ? ================= -->
+    <div id="tab-cuanto" class="tab-content hidden">
+      <section class="global-summary-card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(22, 30, 49, 0.7) 100%); border-color: rgba(99, 102, 241, 0.25);">
+        <h2 style="font-size:1.15rem; font-weight:700; margin:0 0 4px;">🔎 ¿Cuánto gasté en…?</h2>
+        <p class="text-muted" style="font-size:0.85rem; margin:0 0 12px;">Escribí una palabra: busca en el trabajo, el proveedor, el rubro, los comentarios y el presupuesto. "techo" encuentra también "techista" y "Techo de chapa".</p>
+        <div style="display:flex; gap:8px;">
+          <input type="search" id="cuanto-q" class="search-input" style="flex:1; font-size:1rem;" placeholder="Ej: techo, arquitecta, luz, comisión…" autocomplete="off">
+          <button class="btn btn-secondary" type="button" id="cuanto-clear">Limpiar</button>
+        </div>
+        <div id="cuanto-result" style="margin-top:14px;"></div>
+      </section>
+
+      <section class="history-section">
+        <div class="history-header" style="flex-wrap:wrap; gap:10px;">
+          <div class="history-title-area">
+            <h2 style="font-size:1.15rem; font-weight:600;">Todo lo gastado, agrupado</h2>
+          </div>
+          <div class="history-filters">
+            <select id="cuanto-group" class="select-input">
+              <option value="trabajo">Por trabajo</option>
+              <option value="proveedor">Por proveedor</option>
+              <option value="rubro">Por rubro</option>
+            </select>
+          </div>
+        </div>
+        <p class="text-muted" style="font-size:0.8rem; margin:0 0 10px;">Tocá una fila para ver el detalle de esos pagos.</p>
+        <div id="cuanto-groups"></div>
       </section>
     </div>
 
