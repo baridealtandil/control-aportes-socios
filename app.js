@@ -2493,6 +2493,34 @@ function renderCaja() {
   setTxt('caja-bbva-used', `$ ${formatNumber(Math.round(bbvaUsedARS))} ARS`);
   setTxt('caja-bbva-available', `$ ${formatNumber(Math.round(bbvaTotalARS - bbvaUsedARS))} ARS`);
 
+  // Pagos hechos con aportes directos de los socios + total gastado en obra
+  let sociosPagadoARS = 0;
+  let sociedadPagadoARS = 0;
+  const sociosPagadoPor = {};
+  state.transactions.forEach(tx => {
+    if (!isExpenseTransaction(tx)) return;
+    const amt = parseFloat(tx.amount);
+    const rate = parseFloat(tx.rate || 1);
+    const rateUsed = rate > 1 ? rate : rateToday;
+    const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
+    if (PARTNERS.includes(tx.partner)) {
+      sociosPagadoARS += arsVal;
+      sociosPagadoPor[tx.partner] = (sociosPagadoPor[tx.partner] || 0) + arsVal;
+    } else if (tx.partner === SOCIEDAD) {
+      sociedadPagadoARS += arsVal;
+    }
+  });
+  const totalGastadoARS = sociosPagadoARS + sociedadPagadoARS + bbvaUsedARS;
+  setTxt('caja-socios-pagos-total', `$ ${formatNumber(Math.round(sociosPagadoARS))} ARS`);
+  const sociosDetalle = document.getElementById('caja-socios-pagos-detalle');
+  if (sociosDetalle) {
+    sociosDetalle.innerHTML = PARTNERS.filter(p => sociosPagadoPor[p]).map(p =>
+      `<span style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.25); border-radius:8px; padding:4px 10px;"><span style="color:var(--text-muted);">${p}:</span> <strong style="color:var(--primary-light);">$ ${formatNumber(Math.round(sociosPagadoPor[p]))}</strong></span>`
+    ).join("");
+  }
+  setTxt('caja-total-gastado', `$ ${formatNumber(Math.round(totalGastadoARS))} ARS`);
+  setTxt('caja-total-gastado-desglose', `👥 Socios $ ${formatNumber(Math.round(sociosPagadoARS))} + 🏛️ Sociedad $ ${formatNumber(Math.round(sociedadPagadoARS))} + 🏦 BBVA $ ${formatNumber(Math.round(bbvaUsedARS))}`);
+
   // Actualizar tarjeta de Crédito Sociedad
   const credTotalElem = document.getElementById('caja-credito-total');
   if (credTotalElem) credTotalElem.textContent = `$ ${formatNumber(Math.round(totalCreditARS))} ARS`;
