@@ -216,13 +216,13 @@
           </div>
         </div>
 
-        <!-- Fondo Crédito BBVA (cuenta como aporte de los socios marcados en cada gasto) -->
+        <!-- Fondo Crédito BBVA (compartido por los 4 socios, igual que el crédito de la Sociedad) -->
         <div id="caja-bbva-card" style="margin-top: 16px; background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 14px; padding: 16px;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
             <div style="font-size:0.95rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px;">
               🏦 Fondo Crédito BBVA
             </div>
-            <span style="font-size:0.75rem; color:var(--text-muted); background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.3); padding:2px 10px; border-radius:12px;">Cuenta como aporte de los socios marcados</span>
+            <span style="font-size:0.75rem; color:var(--text-muted); background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.3); padding:2px 10px; border-radius:12px;">Financiación Externa · 4 socios</span>
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:8px;">
             <div>
@@ -238,7 +238,6 @@
               <div id="caja-bbva-available" style="font-size:1.1rem; font-weight:700; color:var(--success); font-family:'Outfit',sans-serif;">$ 0 ARS</div>
             </div>
           </div>
-          <div id="caja-bbva-socios" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; font-size:0.8rem;"></div>
         </div>
 
         <div id="caja-empty" style="display:none; text-align:center; color:var(--text-muted); font-size:0.88rem; padding:8px 0;">
@@ -759,17 +758,6 @@
               </label>
             </div>
             <span class="form-helper" style="margin-top: 5px;">Puedes marcar varios socios para registrar el mismo aporte para cada uno de ellos.</span>
-          </div>
-
-          <div class="form-group hidden" id="tx-bbva-socios-group" style="background:rgba(14,165,233,0.06); border:1px solid rgba(14,165,233,0.25); border-radius:10px; padding:10px 12px;">
-            <label style="display:block; margin-bottom:6px; color:#38bdf8;">🏦 Socios que participan de este gasto del BBVA</label>
-            <div style="display:flex; gap:15px; flex-wrap:wrap;">
-              <label style="display:flex; align-items:center; gap:6px; font-size:0.95rem; cursor:pointer;"><input type="checkbox" name="tx-bbva-socio" value="Franco" checked style="width:18px; height:18px; accent-color:#0ea5e9;"> Franco</label>
-              <label style="display:flex; align-items:center; gap:6px; font-size:0.95rem; cursor:pointer;"><input type="checkbox" name="tx-bbva-socio" value="David" checked style="width:18px; height:18px; accent-color:#0ea5e9;"> David</label>
-              <label style="display:flex; align-items:center; gap:6px; font-size:0.95rem; cursor:pointer;"><input type="checkbox" name="tx-bbva-socio" value="Gabriel" checked style="width:18px; height:18px; accent-color:#0ea5e9;"> Gabriel</label>
-              <label style="display:flex; align-items:center; gap:6px; font-size:0.95rem; cursor:pointer;"><input type="checkbox" name="tx-bbva-socio" value="Sandra" checked style="width:18px; height:18px; accent-color:#0ea5e9;"> Sandra</label>
-            </div>
-            <div id="tx-bbva-reparto" class="form-helper" style="margin-top:6px; color:#7dd3fc;"></div>
           </div>
 
           <div class="form-group hidden" id="tx-partners-group-edit">

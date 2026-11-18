@@ -6,30 +6,11 @@ const PARTNERS = ["Franco", "David", "Gabriel", "Sandra"];
 const SOCIEDAD = "Sociedad (Crédito)";
 const BBVA = "Crédito BBVA";
 
-// Socios marcados en un gasto pagado con el Crédito BBVA
-function bbvaSocios(tx) {
-  const raw = tx && (tx.socios || (tx.rawTx && tx.rawTx.socios)) || "";
-  return raw.split(",").map(x => x.trim()).filter(x => PARTNERS.includes(x));
-}
-
 // Cómo se reparte un movimiento como aporte entre socios: [[socio, fracción], ...]
-// - Aporte de un socio: 100% de ese socio.
-// - Gasto pagado con el BBVA: partes iguales entre los socios marcados.
-// - Crédito de la Sociedad e ingreso del BBVA: no es aporte de nadie.
+// Solo los aportes directos de un socio. Los créditos (Sociedad y BBVA) son de los 4 y no cuentan como aporte individual.
 function partnerShares(tx) {
   if (PARTNERS.includes(tx.partner)) return [[tx.partner, 1]];
-  if (tx.partner === BBVA && isExpenseTransaction(tx)) {
-    const socios = bbvaSocios(tx);
-    return socios.map(p => [p, 1 / socios.length]);
-  }
   return [];
-}
-
-// ¿El movimiento corresponde al origen/socio elegido en un filtro?
-function matchesOrigen(tx, origen) {
-  if (!origen) return true;
-  if (tx.partner === origen) return true;
-  return tx.partner === BBVA && bbvaSocios(tx).includes(origen);
 }
 
 function origenBadgeHtml(tx) {
@@ -37,9 +18,7 @@ function origenBadgeHtml(tx) {
     return `<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">🏛️ Crédito Sociedad</span>`;
   }
   if (tx.partner === BBVA) {
-    const socios = bbvaSocios(tx);
-    const detalle = isExpenseTransaction(tx) && socios.length ? ` · ${socios.join(", ")}` : "";
-    return `<span style="background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.35); color:#38bdf8; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">🏦 BBVA${detalle}</span>`;
+    return `<span style="background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.35); color:#38bdf8; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">🏦 Crédito BBVA</span>`;
   }
   return `<span style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); color:var(--primary-light); padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">👤 ${tx.partner}</span>`;
 }
@@ -664,7 +643,7 @@ function cuantoExpenseRows() {
     const trabajo = budget ? budget.concept : (tx.concept || "Sin detalle");
     const proveedor = (tx.provider || "").trim() || "Sin proveedor";
     const rubro = (tx.phase || "General").split(":").pop().trim() || "General";
-    const searchText = [tx.concept, tx.provider, tx.phase, tx.comments, tx.partner, tx.socios || "",
+    const searchText = [tx.concept, tx.provider, tx.phase, tx.comments, tx.partner,
       budget ? budget.concept : "", budget ? budget.provider : ""].join(" ");
     return { tx, ars, usd, trabajo, proveedor, rubro, searchText };
   });
@@ -773,10 +752,10 @@ function renderPayments() {
 
   const payments = state.transactions.filter(tx => {
     if (!isExpenseTransaction(tx)) return false;
-    if (filterOrigen && !matchesOrigen(tx, filterOrigen)) return false;
+    if (filterOrigen && tx.partner !== filterOrigen) return false;
 
     if (state.searchQuery) {
-      const searchTarget = `${tx.partner} ${tx.socios || ''} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.comments || ''} ${tx.currency} ${tx.amount}`;
+      const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.comments || ''} ${tx.currency} ${tx.amount}`;
       return matchesSearch(searchTarget, state.searchQuery);
     }
     return true;
@@ -1031,7 +1010,7 @@ function renderResumenCuenta() {
 
   // 2. Filtrar y ordenar DESC (más reciente arriba) para mostrar en pantalla
   const filtered = ledgerEntries.filter(entry => {
-    if (filterOrigen && !matchesOrigen(entry.rawTx || entry, filterOrigen)) return false;
+    if (filterOrigen && entry.partner !== filterOrigen) return false;
     if (filterTipo === "ingreso" && entry.type !== "ingreso") return false;
     if (filterTipo === "egreso" && entry.type !== "egreso") return false;
     if (state.searchQuery) {
@@ -1133,13 +1112,13 @@ function renderTransactions() {
   mobileList.innerHTML = "";
 
   const filtered = state.transactions.filter(tx => {
-    if (filterSocio && !matchesOrigen(tx, filterSocio)) return false;
+    if (filterSocio && tx.partner !== filterSocio) return false;
     if (filterMoneda && tx.currency !== filterMoneda) return false;
     if (filterFase && tx.phase !== filterFase) return false;
     
     // Filtro del buscador global
     if (state.searchQuery) {
-      const searchTarget = `${tx.partner} ${tx.socios || ''} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.comments || ''} ${tx.currency} ${tx.amount}`;
+      const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.comments || ''} ${tx.currency} ${tx.amount}`;
       return matchesSearch(searchTarget, state.searchQuery);
     }
 
@@ -1669,40 +1648,6 @@ function renderAdminUI() {
 }
 
 // 11. ACCIONES DE TRANSACCIONES (AGREGAR / EDITAR / ELIMINAR APORTES)
-// ---- Bloque "socios que participan" del Crédito BBVA en el formulario
-function txEsBbva() {
-  const editGroup = document.getElementById("tx-partners-group-edit");
-  if (editGroup && !editGroup.classList.contains("hidden")) {
-    return document.getElementById("tx-partner-edit").value === BBVA;
-  }
-  const cb = document.querySelector('input[name="tx-partner-checkbox"][value="' + BBVA + '"]');
-  return !!(cb && cb.checked);
-}
-
-function bbvaSociosSeleccionados() {
-  return Array.from(document.querySelectorAll('input[name="tx-bbva-socio"]:checked')).map(cb => cb.value);
-}
-
-function updateBbvaGroup() {
-  const group = document.getElementById("tx-bbva-socios-group");
-  if (!group) return;
-  const isExpenseSelect = document.getElementById("tx-is-expense");
-  const esGasto = !isExpenseSelect || isExpenseSelect.value !== "false";
-  const mostrar = txEsBbva() && esGasto;
-  group.classList.toggle("hidden", !mostrar);
-  const reparto = document.getElementById("tx-bbva-reparto");
-  if (mostrar && reparto) {
-    const socios = bbvaSociosSeleccionados();
-    const monto = parseFloat(document.getElementById("tx-amount").value) || 0;
-    const moneda = document.getElementById("tx-currency").value === "USD" ? "USD " : "$ ";
-    reparto.textContent = socios.length === 0
-      ? "Marcá al menos un socio."
-      : monto > 0
-        ? `Se suma como aporte: ${moneda}${formatNumber(Math.round(monto / socios.length * 100) / 100)} a cada uno (${socios.join(", ")}).`
-        : `Se reparte en partes iguales entre ${socios.length} socio${socios.length > 1 ? "s" : ""}.`;
-  }
-}
-
 async function saveTransaction(event) {
   event.preventDefault();
   if (!window.AppStorage.isAdmin()) return alert("No tienes permisos de administrador.");
@@ -1726,9 +1671,6 @@ async function saveTransaction(event) {
   if (currency === "ARS" && (!rate || rate <= 0)) return alert("Por favor ingresa una cotización de dólar válida");
   if (!concept) return alert("Por favor ingresa un concepto");
   if (!date) return alert("Por favor selecciona una fecha");
-  if (txEsBbva() && is_expense && bbvaSociosSeleccionados().length === 0) {
-    return alert("Marcá al menos un socio que participa de este gasto del BBVA.");
-  }
 
   // Si se asocia a un presupuesto y el usuario no escribió una categoría propia, heredar la del presupuesto
   if (budget_id && !phase) {
@@ -1750,7 +1692,6 @@ async function saveTransaction(event) {
       const partner = document.getElementById("tx-partner-edit").value;
       const txData = {
         partner,
-        socios: partner === BBVA ? bbvaSociosSeleccionados().join(",") : "",
         currency,
         amount,
         rate,
@@ -1780,7 +1721,6 @@ async function saveTransaction(event) {
         const txData = {
           id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
           partner: partnerName,
-          socios: partnerName === BBVA ? bbvaSociosSeleccionados().join(",") : "",
           currency,
           amount,
           rate,
@@ -1831,10 +1771,6 @@ window.editTransaction = function(id) {
   document.getElementById("tx-partners-group-create").classList.add("hidden");
   document.getElementById("tx-partners-group-edit").classList.remove("hidden");
   document.getElementById("tx-partner-edit").value = tx.partner;
-  const sociosTx = tx.partner === BBVA ? bbvaSocios(tx) : [];
-  document.querySelectorAll('input[name="tx-bbva-socio"]').forEach(cb => {
-    cb.checked = sociosTx.length ? sociosTx.includes(cb.value) : true;
-  });
 
   document.getElementById("tx-currency").value = tx.currency;
   document.getElementById("tx-amount").value = tx.amount;
@@ -1993,7 +1929,6 @@ function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.add("active");
-    if (modalId === "modal-transaction") updateBbvaGroup();
     if (modalId === "modal-categories") {
       renderCategoriesConfigList();
     }
@@ -2219,11 +2154,6 @@ function initEventListeners() {
     updateTxUsdHelper();
   });
   document.getElementById("tx-amount").addEventListener("input", updateTxUsdHelper);
-  document.getElementById("tx-amount").addEventListener("input", updateBbvaGroup);
-  document.getElementById("tx-currency").addEventListener("change", updateBbvaGroup);
-  const txIsExpense = document.getElementById("tx-is-expense");
-  if (txIsExpense) txIsExpense.addEventListener("change", updateBbvaGroup);
-  document.querySelectorAll('input[name="tx-bbva-socio"]').forEach(cb => cb.addEventListener("change", updateBbvaGroup));
   document.querySelectorAll('input[name="tx-partner-checkbox"]').forEach(cb => cb.addEventListener("change", () => {
     // El BBVA va solo: al marcarlo se desmarcan los demás orígenes, y viceversa
     if (cb.checked) {
@@ -2231,7 +2161,6 @@ function initEventListeners() {
         if (other !== cb && (cb.value === BBVA || other.value === BBVA)) other.checked = false;
       });
     }
-    updateBbvaGroup();
   }));
   document.getElementById("tx-rate").addEventListener("input", updateTxUsdHelper);
   document.getElementById("tx-budget-id").addEventListener("change", (e) => {
@@ -2547,7 +2476,6 @@ function renderCaja() {
   // Fondo Crédito BBVA
   let bbvaTotalARS = 0;
   let bbvaUsedARS = 0;
-  const bbvaPorSocio = {};
   state.transactions.forEach(tx => {
     if (tx.partner !== BBVA) return;
     const amt = parseFloat(tx.amount);
@@ -2556,7 +2484,6 @@ function renderCaja() {
     const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
     if (isExpenseTransaction(tx)) {
       bbvaUsedARS += arsVal;
-      partnerShares(tx).forEach(([p, f]) => { bbvaPorSocio[p] = (bbvaPorSocio[p] || 0) + arsVal * f; });
     } else {
       bbvaTotalARS += arsVal;
     }
@@ -2565,13 +2492,6 @@ function renderCaja() {
   setTxt('caja-bbva-total', `$ ${formatNumber(Math.round(bbvaTotalARS))} ARS`);
   setTxt('caja-bbva-used', `$ ${formatNumber(Math.round(bbvaUsedARS))} ARS`);
   setTxt('caja-bbva-available', `$ ${formatNumber(Math.round(bbvaTotalARS - bbvaUsedARS))} ARS`);
-  const bbvaSociosElem = document.getElementById('caja-bbva-socios');
-  if (bbvaSociosElem) {
-    const entries = PARTNERS.filter(p => bbvaPorSocio[p]);
-    bbvaSociosElem.innerHTML = entries.length
-      ? entries.map(p => `<span style="background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.25); border-radius:8px; padding:4px 10px;"><span style="color:var(--text-muted);">${p}:</span> <strong style="color:#7dd3fc;">$ ${formatNumber(Math.round(bbvaPorSocio[p]))}</strong></span>`).join("")
-      : `<span style="color:var(--text-muted);">Todavía no hay gastos pagados con el BBVA.</span>`;
-  }
 
   // Actualizar tarjeta de Crédito Sociedad
   const credTotalElem = document.getElementById('caja-credito-total');
