@@ -3,6 +3,46 @@
 // Vinculado a la base de datos de Railway
 
 const PARTNERS = ["Franco", "David", "Gabriel", "Sandra"];
+const SOCIEDAD = "Sociedad (Crédito)";
+const BBVA = "Crédito BBVA";
+
+// Socios marcados en un gasto pagado con el Crédito BBVA
+function bbvaSocios(tx) {
+  const raw = tx && (tx.socios || (tx.rawTx && tx.rawTx.socios)) || "";
+  return raw.split(",").map(x => x.trim()).filter(x => PARTNERS.includes(x));
+}
+
+// Cómo se reparte un movimiento como aporte entre socios: [[socio, fracción], ...]
+// - Aporte de un socio: 100% de ese socio.
+// - Gasto pagado con el BBVA: partes iguales entre los socios marcados.
+// - Crédito de la Sociedad e ingreso del BBVA: no es aporte de nadie.
+function partnerShares(tx) {
+  if (PARTNERS.includes(tx.partner)) return [[tx.partner, 1]];
+  if (tx.partner === BBVA && isExpenseTransaction(tx)) {
+    const socios = bbvaSocios(tx);
+    return socios.map(p => [p, 1 / socios.length]);
+  }
+  return [];
+}
+
+// ¿El movimiento corresponde al origen/socio elegido en un filtro?
+function matchesOrigen(tx, origen) {
+  if (!origen) return true;
+  if (tx.partner === origen) return true;
+  return tx.partner === BBVA && bbvaSocios(tx).includes(origen);
+}
+
+function origenBadgeHtml(tx) {
+  if (tx.partner === SOCIEDAD) {
+    return `<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">🏛️ Crédito Sociedad</span>`;
+  }
+  if (tx.partner === BBVA) {
+    const socios = bbvaSocios(tx);
+    const detalle = isExpenseTransaction(tx) && socios.length ? ` · ${socios.join(", ")}` : "";
+    return `<span style="background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.35); color:#38bdf8; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">🏦 BBVA${detalle}</span>`;
+  }
+  return `<span style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); color:var(--primary-light); padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">👤 ${tx.partner}</span>`;
+}
 const TARGET_PER_PARTNER = 50000; // En USD
 const TOTAL_PROJECT_TARGET = TARGET_PER_PARTNER * PARTNERS.length; // 200,000 USD
 
@@ -261,22 +301,22 @@ function calculateAndRenderDashboard() {
       totalUSDCollected += amount;
       const arsEquiv = amount * rateUsed;
       totalARSCollected += arsEquiv;
-      if (partnerStats[tx.partner]) {
-        partnerStats[tx.partner].usdDirect += amount;
-        partnerStats[tx.partner].totalUsdValue += amount;
-        partnerStats[tx.partner].arsEquivOfUsd += arsEquiv;
-        partnerStats[tx.partner].totalArsValue += arsEquiv;
-      }
+      partnerShares(tx).forEach(([p, f]) => {
+        partnerStats[p].usdDirect += amount * f;
+        partnerStats[p].totalUsdValue += amount * f;
+        partnerStats[p].arsEquivOfUsd += arsEquiv * f;
+        partnerStats[p].totalArsValue += arsEquiv * f;
+      });
     } else {
       const usdEquiv = amount / rateUsed;
       totalARSCollected += amount;
       totalUSDCollected += usdEquiv;
-      if (partnerStats[tx.partner]) {
-        partnerStats[tx.partner].arsTotal += amount;
-        partnerStats[tx.partner].usdEquiv += usdEquiv;
-        partnerStats[tx.partner].totalUsdValue += usdEquiv;
-        partnerStats[tx.partner].totalArsValue += amount;
-      }
+      partnerShares(tx).forEach(([p, f]) => {
+        partnerStats[p].arsTotal += amount * f;
+        partnerStats[p].usdEquiv += usdEquiv * f;
+        partnerStats[p].totalUsdValue += usdEquiv * f;
+        partnerStats[p].totalArsValue += amount * f;
+      });
     }
   });
 
@@ -624,7 +664,7 @@ function cuantoExpenseRows() {
     const trabajo = budget ? budget.concept : (tx.concept || "Sin detalle");
     const proveedor = (tx.provider || "").trim() || "Sin proveedor";
     const rubro = (tx.phase || "General").split(":").pop().trim() || "General";
-    const searchText = [tx.concept, tx.provider, tx.phase, tx.comments, tx.partner,
+    const searchText = [tx.concept, tx.provider, tx.phase, tx.comments, tx.partner, tx.socios || "",
       budget ? budget.concept : "", budget ? budget.provider : ""].join(" ");
     return { tx, ars, usd, trabajo, proveedor, rubro, searchText };
   });
@@ -733,10 +773,10 @@ function renderPayments() {
 
   const payments = state.transactions.filter(tx => {
     if (!isExpenseTransaction(tx)) return false;
-    if (filterOrigen && tx.partner !== filterOrigen) return false;
+    if (filterOrigen && !matchesOrigen(tx, filterOrigen)) return false;
 
     if (state.searchQuery) {
-      const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.comments || ''} ${tx.currency} ${tx.amount}`;
+      const searchTarget = `${tx.partner} ${tx.socios || ''} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.comments || ''} ${tx.currency} ${tx.amount}`;
       return matchesSearch(searchTarget, state.searchQuery);
     }
     return true;
@@ -748,6 +788,8 @@ function renderPayments() {
   });
 
   // Sumar únicamente los pagos reales a proveedores
+  let paidWithSociedadARS = 0;
+  let paidWithBbvaARS = 0;
   state.transactions.forEach(tx => {
     if (isExpenseTransaction(tx)) {
       const amt = parseFloat(tx.amount);
@@ -756,8 +798,12 @@ function renderPayments() {
       const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
 
       totalPaidARS += arsVal;
-      if (tx.partner === "Sociedad (Crédito)") {
+      if (tx.partner === SOCIEDAD) {
         paidWithCreditARS += arsVal;
+        paidWithSociedadARS += arsVal;
+      } else if (tx.partner === BBVA) {
+        paidWithCreditARS += arsVal;
+        paidWithBbvaARS += arsVal;
       } else {
         paidWithSociosARS += arsVal;
       }
@@ -769,6 +815,8 @@ function renderPayments() {
 
   const credElem = document.getElementById("pagos-credito-ars");
   if (credElem) credElem.textContent = `$ ${formatNumber(Math.round(paidWithCreditARS))} ARS`;
+  const credDesglose = document.getElementById("pagos-credito-desglose");
+  if (credDesglose) credDesglose.textContent = `🏛️ Sociedad $ ${formatNumber(Math.round(paidWithSociedadARS))} · 🏦 BBVA $ ${formatNumber(Math.round(paidWithBbvaARS))}`;
 
   const sociosElem = document.getElementById("pagos-socios-ars");
   if (sociosElem) sociosElem.textContent = `$ ${formatNumber(Math.round(paidWithSociosARS))} ARS`;
@@ -791,9 +839,7 @@ function renderPayments() {
       : "";
     const commentsHtml = formatCommentsHtml(tx);
 
-    const origenBadge = tx.partner === "Sociedad (Crédito)"
-      ? `<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">🏛️ Crédito Sociedad</span>`
-      : `<span style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); color:var(--primary-light); padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">👤 ${tx.partner}</span>`;
+    const origenBadge = origenBadgeHtml(tx.rawTx ? Object.assign({}, tx.rawTx, { partner: tx.partner }) : tx);
 
     // Fila Desktop
     const tr = document.createElement("tr");
@@ -889,7 +935,7 @@ function renderResumenCuenta() {
     const rateUsed = rate > 1 ? rate : rateToday;
     const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
 
-    const isCreditSource = (tx.partner === "Sociedad (Crédito)");
+    const isCreditSource = (tx.partner === SOCIEDAD || tx.partner === BBVA);
     const isPartnerSource = PARTNERS.includes(tx.partner);
     const isExpense = isExpenseTransaction(tx);
 
@@ -985,7 +1031,7 @@ function renderResumenCuenta() {
 
   // 2. Filtrar y ordenar DESC (más reciente arriba) para mostrar en pantalla
   const filtered = ledgerEntries.filter(entry => {
-    if (filterOrigen && entry.partner !== filterOrigen) return false;
+    if (filterOrigen && !matchesOrigen(entry.rawTx || entry, filterOrigen)) return false;
     if (filterTipo === "ingreso" && entry.type !== "ingreso") return false;
     if (filterTipo === "egreso" && entry.type !== "egreso") return false;
     if (state.searchQuery) {
@@ -1014,9 +1060,7 @@ function renderResumenCuenta() {
       : "";
     const commentsHtml = formatCommentsHtml(tx);
 
-    const origenBadge = tx.partner === "Sociedad (Crédito)"
-      ? `<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">🏛️ Crédito Sociedad</span>`
-      : `<span style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); color:var(--primary-light); padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.78rem;">👤 ${tx.partner}</span>`;
+    const origenBadge = origenBadgeHtml(tx.rawTx ? Object.assign({}, tx.rawTx, { partner: tx.partner }) : tx);
 
     const ingresoHtml = tx.ingreso > 0
       ? `<span style="color:#10b981; font-weight:700;">+ $ ${formatNumber(Math.round(tx.ingreso))}</span>`
@@ -1089,13 +1133,13 @@ function renderTransactions() {
   mobileList.innerHTML = "";
 
   const filtered = state.transactions.filter(tx => {
-    if (filterSocio && tx.partner !== filterSocio) return false;
+    if (filterSocio && !matchesOrigen(tx, filterSocio)) return false;
     if (filterMoneda && tx.currency !== filterMoneda) return false;
     if (filterFase && tx.phase !== filterFase) return false;
     
     // Filtro del buscador global
     if (state.searchQuery) {
-      const searchTarget = `${tx.partner} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.comments || ''} ${tx.currency} ${tx.amount}`;
+      const searchTarget = `${tx.partner} ${tx.socios || ''} ${tx.concept} ${tx.provider || ''} ${tx.phase} ${tx.comments || ''} ${tx.currency} ${tx.amount}`;
       return matchesSearch(searchTarget, state.searchQuery);
     }
 
@@ -1625,6 +1669,40 @@ function renderAdminUI() {
 }
 
 // 11. ACCIONES DE TRANSACCIONES (AGREGAR / EDITAR / ELIMINAR APORTES)
+// ---- Bloque "socios que participan" del Crédito BBVA en el formulario
+function txEsBbva() {
+  const editGroup = document.getElementById("tx-partners-group-edit");
+  if (editGroup && !editGroup.classList.contains("hidden")) {
+    return document.getElementById("tx-partner-edit").value === BBVA;
+  }
+  const cb = document.querySelector('input[name="tx-partner-checkbox"][value="' + BBVA + '"]');
+  return !!(cb && cb.checked);
+}
+
+function bbvaSociosSeleccionados() {
+  return Array.from(document.querySelectorAll('input[name="tx-bbva-socio"]:checked')).map(cb => cb.value);
+}
+
+function updateBbvaGroup() {
+  const group = document.getElementById("tx-bbva-socios-group");
+  if (!group) return;
+  const isExpenseSelect = document.getElementById("tx-is-expense");
+  const esGasto = !isExpenseSelect || isExpenseSelect.value !== "false";
+  const mostrar = txEsBbva() && esGasto;
+  group.classList.toggle("hidden", !mostrar);
+  const reparto = document.getElementById("tx-bbva-reparto");
+  if (mostrar && reparto) {
+    const socios = bbvaSociosSeleccionados();
+    const monto = parseFloat(document.getElementById("tx-amount").value) || 0;
+    const moneda = document.getElementById("tx-currency").value === "USD" ? "USD " : "$ ";
+    reparto.textContent = socios.length === 0
+      ? "Marcá al menos un socio."
+      : monto > 0
+        ? `Se suma como aporte: ${moneda}${formatNumber(Math.round(monto / socios.length * 100) / 100)} a cada uno (${socios.join(", ")}).`
+        : `Se reparte en partes iguales entre ${socios.length} socio${socios.length > 1 ? "s" : ""}.`;
+  }
+}
+
 async function saveTransaction(event) {
   event.preventDefault();
   if (!window.AppStorage.isAdmin()) return alert("No tienes permisos de administrador.");
@@ -1648,6 +1726,9 @@ async function saveTransaction(event) {
   if (currency === "ARS" && (!rate || rate <= 0)) return alert("Por favor ingresa una cotización de dólar válida");
   if (!concept) return alert("Por favor ingresa un concepto");
   if (!date) return alert("Por favor selecciona una fecha");
+  if (txEsBbva() && is_expense && bbvaSociosSeleccionados().length === 0) {
+    return alert("Marcá al menos un socio que participa de este gasto del BBVA.");
+  }
 
   // Si se asocia a un presupuesto y el usuario no escribió una categoría propia, heredar la del presupuesto
   if (budget_id && !phase) {
@@ -1669,6 +1750,7 @@ async function saveTransaction(event) {
       const partner = document.getElementById("tx-partner-edit").value;
       const txData = {
         partner,
+        socios: partner === BBVA ? bbvaSociosSeleccionados().join(",") : "",
         currency,
         amount,
         rate,
@@ -1687,6 +1769,10 @@ async function saveTransaction(event) {
       if (checkedBoxes.length === 0) {
         throw new Error("Por favor selecciona al menos un socio.");
       }
+      const usaBbva = Array.from(checkedBoxes).some(cb => cb.value === BBVA);
+      if (usaBbva && checkedBoxes.length > 1) {
+        throw new Error("El Crédito BBVA se carga solo: desmarcá los demás orígenes.");
+      }
 
       // Crear en bucle un aporte para cada socio seleccionado
       const savePromises = Array.from(checkedBoxes).map(async (cb) => {
@@ -1694,6 +1780,7 @@ async function saveTransaction(event) {
         const txData = {
           id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
           partner: partnerName,
+          socios: partnerName === BBVA ? bbvaSociosSeleccionados().join(",") : "",
           currency,
           amount,
           rate,
@@ -1744,6 +1831,10 @@ window.editTransaction = function(id) {
   document.getElementById("tx-partners-group-create").classList.add("hidden");
   document.getElementById("tx-partners-group-edit").classList.remove("hidden");
   document.getElementById("tx-partner-edit").value = tx.partner;
+  const sociosTx = tx.partner === BBVA ? bbvaSocios(tx) : [];
+  document.querySelectorAll('input[name="tx-bbva-socio"]').forEach(cb => {
+    cb.checked = sociosTx.length ? sociosTx.includes(cb.value) : true;
+  });
 
   document.getElementById("tx-currency").value = tx.currency;
   document.getElementById("tx-amount").value = tx.amount;
@@ -1902,6 +1993,7 @@ function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.add("active");
+    if (modalId === "modal-transaction") updateBbvaGroup();
     if (modalId === "modal-categories") {
       renderCategoriesConfigList();
     }
@@ -2127,6 +2219,20 @@ function initEventListeners() {
     updateTxUsdHelper();
   });
   document.getElementById("tx-amount").addEventListener("input", updateTxUsdHelper);
+  document.getElementById("tx-amount").addEventListener("input", updateBbvaGroup);
+  document.getElementById("tx-currency").addEventListener("change", updateBbvaGroup);
+  const txIsExpense = document.getElementById("tx-is-expense");
+  if (txIsExpense) txIsExpense.addEventListener("change", updateBbvaGroup);
+  document.querySelectorAll('input[name="tx-bbva-socio"]').forEach(cb => cb.addEventListener("change", updateBbvaGroup));
+  document.querySelectorAll('input[name="tx-partner-checkbox"]').forEach(cb => cb.addEventListener("change", () => {
+    // El BBVA va solo: al marcarlo se desmarcan los demás orígenes, y viceversa
+    if (cb.checked) {
+      document.querySelectorAll('input[name="tx-partner-checkbox"]').forEach(other => {
+        if (other !== cb && (cb.value === BBVA || other.value === BBVA)) other.checked = false;
+      });
+    }
+    updateBbvaGroup();
+  }));
   document.getElementById("tx-rate").addEventListener("input", updateTxUsdHelper);
   document.getElementById("tx-budget-id").addEventListener("change", (e) => {
     const budgetId = e.target.value;
@@ -2391,7 +2497,7 @@ function renderCaja() {
   const rateToday = state.dolarBlue.promedio || 1545;
 
   // 1. Filtrar aportes de SOCIOS que ingresaron a Caja (no asignados a un gasto)
-  const unassigned = state.transactions.filter(tx => !isExpenseTransaction(tx) && tx.partner !== "Sociedad (Crédito)");
+  const unassigned = state.transactions.filter(tx => !isExpenseTransaction(tx) && tx.partner !== SOCIEDAD && tx.partner !== BBVA);
 
   // Totales por moneda
   let cajaUSD = 0;
@@ -2437,6 +2543,35 @@ function renderCaja() {
   });
 
   const availableCreditARS = Math.max(totalCreditARS - usedCreditARS, 0);
+
+  // Fondo Crédito BBVA
+  let bbvaTotalARS = 0;
+  let bbvaUsedARS = 0;
+  const bbvaPorSocio = {};
+  state.transactions.forEach(tx => {
+    if (tx.partner !== BBVA) return;
+    const amt = parseFloat(tx.amount);
+    const rate = parseFloat(tx.rate || 1);
+    const rateUsed = rate > 1 ? rate : rateToday;
+    const arsVal = tx.currency === 'USD' ? amt * rateUsed : amt;
+    if (isExpenseTransaction(tx)) {
+      bbvaUsedARS += arsVal;
+      partnerShares(tx).forEach(([p, f]) => { bbvaPorSocio[p] = (bbvaPorSocio[p] || 0) + arsVal * f; });
+    } else {
+      bbvaTotalARS += arsVal;
+    }
+  });
+  const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setTxt('caja-bbva-total', `$ ${formatNumber(Math.round(bbvaTotalARS))} ARS`);
+  setTxt('caja-bbva-used', `$ ${formatNumber(Math.round(bbvaUsedARS))} ARS`);
+  setTxt('caja-bbva-available', `$ ${formatNumber(Math.round(bbvaTotalARS - bbvaUsedARS))} ARS`);
+  const bbvaSociosElem = document.getElementById('caja-bbva-socios');
+  if (bbvaSociosElem) {
+    const entries = PARTNERS.filter(p => bbvaPorSocio[p]);
+    bbvaSociosElem.innerHTML = entries.length
+      ? entries.map(p => `<span style="background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.25); border-radius:8px; padding:4px 10px;"><span style="color:var(--text-muted);">${p}:</span> <strong style="color:#7dd3fc;">$ ${formatNumber(Math.round(bbvaPorSocio[p]))}</strong></span>`).join("")
+      : `<span style="color:var(--text-muted);">Todavía no hay gastos pagados con el BBVA.</span>`;
+  }
 
   // Actualizar tarjeta de Crédito Sociedad
   const credTotalElem = document.getElementById('caja-credito-total');
@@ -2524,12 +2659,9 @@ function renderEqualizationTable() {
   state.transactions.forEach(tx => {
     const amount = parseFloat(tx.amount);
     const rate = parseFloat(tx.rate || 1);
-    if (tx.currency === "ARS") {
-      partnerArsTotals[tx.partner] += amount;
-    } else {
-      const txRate = rate > 1 ? rate : rateToday;
-      partnerArsTotals[tx.partner] += (amount * txRate);
-    }
+    const txRate = rate > 1 ? rate : rateToday;
+    const arsVal = tx.currency === "ARS" ? amount : amount * txRate;
+    partnerShares(tx).forEach(([p, f]) => { partnerArsTotals[p] += arsVal * f; });
   });
 
   // 2. Encontrar el Máximo Aportado en Pesos (ARS)
@@ -2608,6 +2740,8 @@ function shareWhatsAppSummary() {
   let totalCreditARS = 0;
   let usedCreditARS = 0;
   let unassignedPartnersARS = 0;
+  let totalBbvaARS = 0;
+  let usedBbvaARS = 0;
 
   const partnerArsTotals = {};
   PARTNERS.forEach(p => { partnerArsTotals[p] = 0; });
@@ -2624,12 +2758,18 @@ function shareWhatsAppSummary() {
 
     const isExpense = isExpenseTransaction(tx);
 
+    partnerShares(tx).forEach(([p, f]) => { partnerArsTotals[p] += arsVal * f; });
     if (PARTNERS.includes(tx.partner)) {
-      partnerArsTotals[tx.partner] += arsVal;
       if (!isExpense) {
         unassignedPartnersARS += arsVal;
       }
-    } else if (tx.partner === "Sociedad (Crédito)") {
+    } else if (tx.partner === BBVA) {
+      if (isExpense) {
+        usedBbvaARS += arsVal;
+      } else {
+        totalBbvaARS += arsVal;
+      }
+    } else if (tx.partner === SOCIEDAD) {
       if (isExpense) {
         usedCreditARS += arsVal;
       } else {
@@ -2644,7 +2784,8 @@ function shareWhatsAppSummary() {
   });
 
   const availableCreditARS = Math.max(totalCreditARS - usedCreditARS, 0);
-  const totalCajaDisponibleARS = unassignedPartnersARS + availableCreditARS;
+  const availableBbvaARS = Math.max(totalBbvaARS - usedBbvaARS, 0);
+  const totalCajaDisponibleARS = unassignedPartnersARS + availableCreditARS + availableBbvaARS;
 
   const dateFormatted = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -2682,7 +2823,7 @@ function shareWhatsAppSummary() {
   text += `• Total Recaudado: *$${formatNumber(Math.round(totalARS))}*\n`;
   text += `• Total Pagos a Obra: *$${formatNumber(Math.round(totalPaidARS))}*\n`;
   text += `• Saldo Disponible en Caja: *$${formatNumber(Math.round(totalCajaDisponibleARS))}*\n`;
-  text += `  └ _(Crédito Disponible: $${formatNumber(Math.round(availableCreditARS))} | Caja Socios: $${formatNumber(Math.round(unassignedPartnersARS))})_\n`;
+  text += `  └ _(Crédito Sociedad: $${formatNumber(Math.round(availableCreditARS))} | BBVA: $${formatNumber(Math.round(availableBbvaARS))} | Caja Socios: $${formatNumber(Math.round(unassignedPartnersARS))})_\n`;
   text += `• Acumulado USD Ref.: *USD ${formatNumber(Math.round(totalUSD))}*\n\n`;
   text += `👥 *ESTADO POR SOCIO*\n\n`;
   text += `${partnerLines}`;
