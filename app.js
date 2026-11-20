@@ -95,6 +95,14 @@ async function loadState() {
     if (el) el.remove();
   }
 
+  // Cheques: se cargan aparte para que una falla no frene el resto de la app
+  try {
+    state.cheques = await window.AppStorage.getCheques();
+  } catch (e) {
+    console.error("No se pudieron cargar los cheques:", e);
+    state.cheques = state.cheques || [];
+  }
+
   // Cargar selectores dinámicos de categorías
   renderCategories();
   
@@ -251,6 +259,7 @@ function renderAll() {
   renderResumenCuenta();
   renderPayments();
   renderCuanto();
+  renderCheques();
   renderTransactions();
   calculateAndRenderBudgetDashboard();
   renderBudgets();
@@ -1454,6 +1463,145 @@ function toggleTabButtons() {
   }
 }
 
+// ================= CHEQUES =================
+function chequeHoyISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function chequeDiasHasta(fechaISO) {
+  const [y, m, d] = fechaISO.split("-").map(Number);
+  const [hy, hm, hd] = chequeHoyISO().split("-").map(Number);
+  return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(hy, hm - 1, hd)) / 86400000);
+}
+
+function renderCheques() {
+  const list = document.getElementById("cheques-list");
+  if (!list) return;
+  const cheques = (state.cheques || []).slice().sort((a, b) => a.fecha_pago.localeCompare(b.fecha_pago));
+  const isAdmin = window.AppStorage.isAdmin();
+  const btnAdd = document.getElementById("btn-add-cheque");
+  if (btnAdd) btnAdd.classList.toggle("hidden", !isAdmin);
+
+  let pendiente = 0, nPend = 0, semana = 0, nSemana = 0, total = 0;
+  cheques.forEach(c => {
+    const dias = chequeDiasHasta(c.fecha_pago);
+    total += c.importe;
+    if (dias >= 0) { pendiente += c.importe; nPend++; }
+    if (dias >= 0 && dias <= 7) { semana += c.importe; nSemana++; }
+  });
+  const fmt = v => `$ ${formatNumber(Math.round(v))}`;
+  const plural = (n, s) => `${n} ${s}${n === 1 ? "" : "s"}`;
+  const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setTxt("cheques-pendiente", fmt(pendiente));
+  setTxt("cheques-pendiente-n", plural(nPend, "cheque"));
+  setTxt("cheques-semana", fmt(semana));
+  setTxt("cheques-semana-n", plural(nSemana, "cheque"));
+  setTxt("cheques-total", fmt(total));
+  setTxt("cheques-total-n", plural(cheques.length, "cheque"));
+
+  const filtro = document.getElementById("filter-cheques-estado")?.value || "";
+  const visibles = cheques.filter(c => {
+    const dias = chequeDiasHasta(c.fecha_pago);
+    if (filtro === "pendiente" && dias < 0) return false;
+    if (filtro === "cumplido" && dias >= 0) return false;
+    if (state.searchQuery) {
+      return matchesSearch(`${c.destinatario} ${c.nota} ${c.importe}`, state.searchQuery);
+    }
+    return true;
+  });
+
+  if (visibles.length === 0) {
+    list.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:30px 10px; font-size:0.9rem;">${cheques.length ? "No hay cheques con ese filtro." : "Todavía no se cargó ningún cheque."}</div>`;
+    return;
+  }
+
+  list.innerHTML = visibles.map(c => {
+    const dias = chequeDiasHasta(c.fecha_pago);
+    let estado;
+    if (dias < 0) estado = `<span style="background:rgba(148,163,184,0.15); color:#cbd5e1; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">✔ Fecha de pago cumplida</span>`;
+    else if (dias === 0) estado = `<span style="background:rgba(239,68,68,0.18); color:#f87171; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">⚠ Se paga hoy</span>`;
+    else if (dias <= 7) estado = `<span style="background:rgba(239,68,68,0.12); color:#fca5a5; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">📅 Faltan ${dias} día${dias === 1 ? "" : "s"}</span>`;
+    else estado = `<span style="background:rgba(234,179,8,0.12); color:#facc15; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">⏳ Faltan ${dias} días</span>`;
+    const acciones = isAdmin
+      ? `<div style="display:flex; gap:6px;"><button class="btn btn-secondary btn-small" onclick="editCheque('${c.id}')">Editar</button><button class="btn btn-danger btn-small" onclick="deleteCheque('${c.id}')">Borrar</button></div>`
+      : "";
+    return `
+      <div class="mobile-tx-card" style="display:flex; flex-direction:row; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px;">
+        <div style="min-width:180px; flex:1;">
+          <div style="font-weight:700; font-size:1rem;">${escapeAttr(c.destinatario)}</div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Emitido ${formatDate(c.fecha_emision)} · Se paga <strong style="color:var(--text-main);">${formatDate(c.fecha_pago)}</strong></div>
+          ${c.nota ? `<div style="font-size:0.78rem; color:var(--text-muted); font-style:italic; margin-top:2px;">💬 ${escapeAttr(c.nota)}</div>` : ""}
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+          <div style="font-weight:800; font-size:1.1rem; font-family:'Outfit',sans-serif;">${fmt(c.importe)}</div>
+          ${estado}
+        </div>
+        ${acciones}
+      </div>`;
+  }).join("");
+}
+
+function openChequeModal(c) {
+  document.getElementById("modal-cheque-title").textContent = c ? "Editar Cheque" : "Nuevo Cheque";
+  document.getElementById("ch-id").value = c ? c.id : "";
+  document.getElementById("ch-importe").value = c ? c.importe : "";
+  document.getElementById("ch-emision").value = c ? c.fecha_emision : chequeHoyISO();
+  document.getElementById("ch-pago").value = c ? c.fecha_pago : "";
+  document.getElementById("ch-destinatario").value = c ? c.destinatario : "";
+  document.getElementById("ch-nota").value = c ? c.nota : "";
+  openModal("modal-cheque");
+}
+
+window.editCheque = function(id) {
+  if (!window.AppStorage.isAdmin()) return;
+  const c = (state.cheques || []).find(x => x.id === id);
+  if (c) openChequeModal(c);
+};
+
+window.deleteCheque = async function(id) {
+  if (!window.AppStorage.isAdmin()) return;
+  const c = (state.cheques || []).find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`¿Borrar el cheque de $ ${formatNumber(Math.round(c.importe))} a ${c.destinatario}?`)) return;
+  try {
+    await window.AppStorage.deleteCheque(id);
+    await loadState();
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
+async function saveCheque(event) {
+  event.preventDefault();
+  if (!window.AppStorage.isAdmin()) return alert("No tienes permisos de administrador.");
+  const id = document.getElementById("ch-id").value;
+  const cheque = {
+    id: id || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11)),
+    importe: parseFloat(document.getElementById("ch-importe").value),
+    fecha_emision: document.getElementById("ch-emision").value,
+    fecha_pago: document.getElementById("ch-pago").value,
+    destinatario: document.getElementById("ch-destinatario").value.trim(),
+    nota: document.getElementById("ch-nota").value.trim()
+  };
+  if (!cheque.importe || cheque.importe <= 0) return alert("Ingresá un importe válido.");
+  if (!cheque.fecha_emision || !cheque.fecha_pago) return alert("Completá las dos fechas.");
+  if (!cheque.destinatario) return alert("Completá el destinatario.");
+  if (cheque.fecha_pago < cheque.fecha_emision) return alert("La fecha de pago no puede ser anterior a la de emisión.");
+
+  const btn = document.getElementById("ch-submit-btn");
+  btn.classList.add("loading");
+  try {
+    await window.AppStorage.saveCheque(cheque, !id);
+    closeModal("modal-cheque");
+    await loadState();
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    btn.classList.remove("loading");
+  }
+}
+
 // Proveedores de un ítem presupuestado: se guardan en el mismo campo `provider`, separados por " / "
 function splitProviders(text) {
   return (text || "").split("/").map(p => p.trim()).filter(Boolean);
@@ -2371,6 +2519,14 @@ function initEventListeners() {
       switchTab(tabId);
     });
   });
+
+  // Cheques
+  const btnAddCheque = document.getElementById("btn-add-cheque");
+  if (btnAddCheque) btnAddCheque.addEventListener("click", () => openChequeModal(null));
+  const chequeForm = document.getElementById("cheque-form");
+  if (chequeForm) chequeForm.addEventListener("submit", saveCheque);
+  const filterCheques = document.getElementById("filter-cheques-estado");
+  if (filterCheques) filterCheques.addEventListener("change", renderCheques);
 
   // Cerrar modales con clic en la X u overlay
   const closeButtons = document.querySelectorAll(".modal-close");

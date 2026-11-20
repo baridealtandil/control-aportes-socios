@@ -88,6 +88,7 @@
       <button class="tab-btn" data-tab="tab-igualar">⚖️ Para Igualar</button>
       <button class="tab-btn" data-tab="tab-aportes">📜 Movimientos</button>
       <button class="tab-btn" data-tab="tab-presupuestos">📊 Presupuestos</button>
+      <button class="tab-btn" data-tab="tab-cheques">🧾 Cheques</button>
       <button class="tab-btn" data-tab="tab-graficos">📈 Gráficos</button>
     </div>
 
@@ -626,6 +627,44 @@
       </section>
     </div>
 
+    <!-- ================= TAB: CHEQUES ================= -->
+    <div id="tab-cheques" class="tab-content hidden">
+      <section class="global-summary-card" style="background: linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(22, 30, 49, 0.7) 100%); border-color: rgba(234, 179, 8, 0.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+          <h2 style="font-size:1.25rem; font-weight:600;">🧾 Registro de Cheques</h2>
+          <button class="btn hidden" type="button" id="btn-add-cheque">+ Cheque</button>
+        </div>
+        <div class="sub-stats-row" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <div class="sub-stat-card" style="background:rgba(234,179,8,0.08); border-color:rgba(234,179,8,0.25);">
+            <div class="sub-stat-title" style="color:#facc15;">⏳ Pendientes de pago</div>
+            <div class="sub-stat-val" id="cheques-pendiente">$ 0</div>
+            <div id="cheques-pendiente-n" style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;"></div>
+          </div>
+          <div class="sub-stat-card" style="background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.25);">
+            <div class="sub-stat-title" style="color:#f87171;">📅 Vencen en los próximos 7 días</div>
+            <div class="sub-stat-val" id="cheques-semana">$ 0</div>
+            <div id="cheques-semana-n" style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;"></div>
+          </div>
+          <div class="sub-stat-card">
+            <div class="sub-stat-title">Σ Total emitido</div>
+            <div class="sub-stat-val" id="cheques-total">$ 0</div>
+            <div id="cheques-total-n" style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="history-section">
+        <div class="history-filters" style="margin-bottom:14px;">
+          <select id="filter-cheques-estado" class="select-input">
+            <option value="">Todos los cheques</option>
+            <option value="pendiente">Solo pendientes</option>
+            <option value="cumplido">Solo con fecha de pago cumplida</option>
+          </select>
+        </div>
+        <div id="cheques-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+      </section>
+    </div>
+
     <!-- ================= TAB 7: GRÁFICOS E INDICADORES ================= -->
     <div id="tab-graficos" class="tab-content hidden">
       <!-- TARJETAS KPI (SIN PROMEDIO DE SOCIO) -->
@@ -940,6 +979,47 @@
         <button class="btn btn-secondary modal-close" type="button">Cancelar</button>
         <button class="btn" type="button" id="bgp-save-btn">Guardar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CHEQUE -->
+  <div class="modal-overlay" id="modal-cheque">
+    <div class="modal-container" style="max-width: 460px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-cheque-title">Nuevo Cheque</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <form id="cheque-form">
+        <div class="modal-body">
+          <input type="hidden" id="ch-id">
+          <div class="form-group">
+            <label for="ch-importe">Importe ($ ARS)</label>
+            <input type="number" id="ch-importe" class="text-input" style="width:100%" min="0.01" step="any" placeholder="Ej: 1500000" required>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="ch-emision">Fecha de emisión</label>
+              <input type="date" id="ch-emision" class="text-input" style="width:100%" required>
+            </div>
+            <div class="form-group">
+              <label for="ch-pago">Fecha de pago</label>
+              <input type="date" id="ch-pago" class="text-input" style="width:100%" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="ch-destinatario">Destinatario</label>
+            <input type="text" id="ch-destinatario" class="text-input" style="width:100%" placeholder="A quién se le entregó" list="provider-suggestions" required>
+          </div>
+          <div class="form-group">
+            <label for="ch-nota">Nota (opcional)</label>
+            <input type="text" id="ch-nota" class="text-input" style="width:100%" placeholder="Ej: N° de cheque, banco, qué se pagó">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close" type="button">Cancelar</button>
+          <button class="btn" type="submit" id="ch-submit-btn">Guardar</button>
+        </div>
+      </form>
     </div>
   </div>
 

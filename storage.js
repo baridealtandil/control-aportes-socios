@@ -227,6 +227,42 @@ class StorageAdapter {
     return true;
   }
 
+  // ================= CHEQUES =================
+
+  async getCheques() {
+    const response = await fetch(`${API_BASE}/api/cheques`);
+    if (!response.ok) throw new Error("No se pudieron cargar los cheques.");
+    const data = await response.json();
+    return data.cheques || [];
+  }
+
+  async saveCheque(cheque, isNew) {
+    if (!this.isAdmin()) throw new Error("No autorizado.");
+    const response = await fetch(`${API_BASE}/api/cheques${isNew ? "" : "/" + cheque.id}`, {
+      method: isNew ? 'POST' : 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-admin-pin': this.adminPin },
+      body: JSON.stringify(cheque)
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Error al guardar el cheque.");
+    }
+    return true;
+  }
+
+  async deleteCheque(id) {
+    if (!this.isAdmin()) throw new Error("No autorizado.");
+    const response = await fetch(`${API_BASE}/api/cheques/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-pin': this.adminPin }
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Error al eliminar el cheque.");
+    }
+    return true;
+  }
+
   // ================= CATEGORÍAS (CATEGORIES) =================
 
   // Obtiene todas las categorías desde Railway

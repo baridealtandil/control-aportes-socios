@@ -951,3 +951,9 @@ header {
   font-size: 0.72rem;
   white-space: nowrap;
 }
+
+/* Barra inferior de admin: que entre completa en celulares chicos */
+@media(max-width: 767px) {
+  .mobile-sticky-bar { gap: 4px; padding-left: 6px; padding-right: 6px; }
+  .mobile-sticky-bar .btn { padding: 8px 8px; font-size: 0.76rem; }
+}
