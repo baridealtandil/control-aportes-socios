@@ -2520,6 +2520,9 @@ function initEventListeners() {
     });
   });
 
+  const cajaChequesCard = document.getElementById("caja-cheques-card");
+  if (cajaChequesCard) cajaChequesCard.addEventListener("click", () => switchTab("tab-cheques"));
+
   // Cheques
   const btnAddCheque = document.getElementById("btn-add-cheque");
   if (btnAddCheque) btnAddCheque.addEventListener("click", () => openChequeModal(null));
@@ -2675,6 +2678,16 @@ function renderCaja() {
     ).join("");
   }
   setTxt('caja-total-gastado', `$ ${formatNumber(Math.round(totalGastadoARS))} ARS`);
+
+  // Cheques emitidos
+  const cheques = state.cheques || [];
+  const chequesTotal = cheques.reduce((s, c) => s + c.importe, 0);
+  const pendientes = cheques.filter(c => chequeDiasHasta(c.fecha_pago) >= 0);
+  const chequesPend = pendientes.reduce((s, c) => s + c.importe, 0);
+  setTxt('caja-cheques-total', `$ ${formatNumber(Math.round(chequesTotal))} ARS`);
+  setTxt('caja-cheques-detalle', cheques.length
+    ? `${cheques.length} cheque${cheques.length === 1 ? "" : "s"} · Pendiente de pago: $ ${formatNumber(Math.round(chequesPend))} (${pendientes.length})`
+    : 'Todavía no se cargó ningún cheque.');
   setTxt('caja-total-gastado-desglose', `👥 Socios $ ${formatNumber(Math.round(sociosPagadoARS))} + 🏛️ Sociedad $ ${formatNumber(Math.round(sociedadPagadoARS))} + 🏦 BBVA $ ${formatNumber(Math.round(bbvaUsedARS))}`);
 
   // Actualizar tarjeta de Crédito Sociedad

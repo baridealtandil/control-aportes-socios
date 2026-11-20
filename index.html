@@ -250,6 +250,16 @@
           <div id="caja-socios-pagos-detalle" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; font-size:0.8rem;"></div>
         </div>
 
+        <!-- Cheques emitidos (registro aparte, no se suma al total gastado) -->
+        <div id="caja-cheques-card" style="margin-top: 16px; background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 14px; padding: 16px; cursor:pointer;" title="Ver el detalle en la pestaña Cheques">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+            <div style="font-size:0.95rem; font-weight:700; color:#facc15;">🧾 Cheques Emitidos</div>
+            <span style="font-size:0.68rem; background:rgba(234,179,8,0.2); color:#facc15; padding:1px 6px; border-radius:6px; font-weight:600;">🔍 Ver cheques</span>
+          </div>
+          <div id="caja-cheques-total" style="font-size:1.1rem; font-weight:700; color:var(--text-main); font-family:'Outfit',sans-serif;">$ 0 ARS</div>
+          <div id="caja-cheques-detalle" style="font-size:0.8rem; color:var(--text-muted); margin-top:6px;"></div>
+        </div>
+
         <!-- Total gastado en obra (socios + créditos) -->
         <div id="caja-total-gastado-card" style="margin-top: 16px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 14px; padding: 16px;">
           <div style="font-size:0.95rem; font-weight:700; color:var(--text-main); margin-bottom:8px;">Σ Total Gastado en Obra</div>
